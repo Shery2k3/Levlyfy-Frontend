@@ -11,6 +11,7 @@ import { StatHexagon } from "./user-profile";
 import { Switch } from "@/components/ui/switch";
 
 import { Sun, Moon, Settings } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -30,6 +31,14 @@ export default function Navigation() {
     { href: "/achievements", label: "ACHIEVEMENTS" },
     { href: "/news", label: "NEWS" },
   ];
+
+  const { logout } = useAuth();
+
+  const handelLogout = () => {
+    console.log("User logged out");
+    logout();
+    window.location.href = "/auth/login"; // Redirect to login page
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-sm">
@@ -228,6 +237,16 @@ export default function Navigation() {
                   <div className="text-lg font-bold">2</div>
                   <div className="text-xxs text-gray-500">completed</div>
                 </div>
+              </div>
+              {/* logout button */}
+              <div className="mt-6 flex justify-center">
+                <Button
+                  variant="outline"
+                  className="w-full py-2 rounded-lg border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-colors font-semibold"
+                  onClick={handelLogout}
+                >
+                  Logout
+                </Button>
               </div>
             </div>
           )}
