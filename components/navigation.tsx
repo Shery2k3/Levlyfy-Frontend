@@ -27,9 +27,6 @@ export default function Navigation() {
   const navItems = [
     { href: "/", label: "CAREER" },
     { href: "/leaderboard", label: "LEADERBOARD" },
-    { href: "/training", label: "TRAINING CENTER" },
-    { href: "/achievements", label: "ACHIEVEMENTS" },
-    { href: "/news", label: "NEWS" },
   ];
 
   const { logout } = useAuth();
