@@ -23,7 +23,6 @@ export default function SignupPage() {
     name: "",
     email: "",
     password: "",
-    role: "",
   });
   const [error, setError] = useState("");
 
@@ -116,21 +115,6 @@ export default function SignupPage() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-        </div>
-
-        {/* Role */}
-        <div className="space-y-2">
-          <Label className="text-white">Role</Label>
-          <Select onValueChange={(value) => setForm({ ...form, role: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="user">User</SelectItem>
-              <SelectItem value="sales">Sales</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Submit Button */}
