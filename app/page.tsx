@@ -138,16 +138,16 @@ export default function HomePage() {
           </div>
 
           {/* buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="lime-button" onClick={() => setIsCalling(true)}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" onClick={() => setIsCalling(true)}>
               <Phone className="mr-2 h-5 w-5" />
               Call Next Customer
             </Button>
-            <Button className="lime-button">
+            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
               <MessageSquareText className="mr-2 h-5 w-5" />
               Review AI Feedback
             </Button>
-            <Button className="lime-button">
+            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
               <Clock className="mr-2 h-5 w-5" />
               History
             </Button>

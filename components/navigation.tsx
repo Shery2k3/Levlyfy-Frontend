@@ -25,7 +25,7 @@ export default function Navigation() {
   };
 
   const navItems = [
-    { href: "/", label: "CAREER" },
+    { href: "/", label: "HOME" },
     { href: "/leaderboard", label: "LEADERBOARD" },
   ];
 
@@ -38,7 +38,7 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-sm">
+    <nav className="sticky top-0 z-50 bg-gradient-to-b from-black/90 to-black/60 backdrop-blur-md shadow-lg">
       <div className="flex justify-between items-center px-4 md:px-8 py-4">
         <div className="flex items-center">
           {/* Mobile menu button */}
@@ -47,16 +47,17 @@ export default function Navigation() {
             size="icon"
             className="md:hidden mr-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
+              <X className="h-7 w-7 text-white transition-transform duration-200" />
             ) : (
-              <Menu className="h-6 w-6" />
+              <Menu className="h-7 w-7 text-white transition-transform duration-200" />
             )}
           </Button>
 
           {/* Desktop navigation */}
-          <div className="hidden md:flex space-x-1 lg:space-x-4">
+          <div className="hidden md:flex gap-2 lg:gap-6">
             {navItems.map((item) => (
               <NavItem
                 key={item.href}
@@ -253,15 +254,15 @@ export default function Navigation() {
       {/* Mobile navigation */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-black/95 animate-fade-in">
-          <div className="flex flex-col space-y-2 p-4">
+          <div className="flex flex-col gap-2 p-4">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`py-3 px-4 font-bold text-center rounded-md ${
+                className={`py-3 px-4 font-bold text-center rounded-lg shadow-md transition-all duration-200 border border-transparent ${
                   isActive(item.href)
-                    ? "bg-navItem-default border-l-4 border-navItem-active"
-                    : "bg-navItem-default"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-400 text-white border-blue-500 scale-105"
+                    : "bg-navItem-default text-gray-200 hover:bg-blue-900/60 hover:text-white"
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -285,8 +286,18 @@ function NavItem({
   active: boolean;
 }) {
   return (
-    <Link href={href} className={`nav-item ${active ? "active" : ""}`}>
-      {label}
+    <Link
+      href={href}
+      className={`relative px-4 py-2 rounded-lg font-semibold text-sm tracking-wide transition-all duration-200 flex items-center gap-2
+        ${active
+          ? "bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg scale-105 border border-blue-500"
+          : "bg-navItem-default text-gray-200 hover:bg-blue-900/60 hover:text-white border border-transparent"}
+        hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400`}
+    >
+      <span className="z-10">{label}</span>
+      {active && (
+        <span className="absolute left-0 top-0 w-full h-full rounded-lg border-2 border-blue-400 animate-pulse pointer-events-none" style={{boxShadow: '0 0 8px 2px #60a5fa55'}} />
+      )}
     </Link>
   );
 }

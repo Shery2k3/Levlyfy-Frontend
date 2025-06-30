@@ -97,6 +97,19 @@ export default function LeaderboardPage() {
         />
       </div>
 
+      {/* Action Buttons - Responsive */}
+      <div className="flex flex-col sm:flex-row gap-3 w-full justify-center items-center mt-2">
+        <Button className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow transition-all text-base sm:text-lg">
+          Call Next Customer
+        </Button>
+        <Button className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold bg-green-600 hover:bg-green-700 text-white shadow transition-all text-base sm:text-lg">
+          Review AI Feedback
+        </Button>
+        <Button className="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold bg-gray-700 hover:bg-gray-800 text-white shadow transition-all text-base sm:text-lg">
+          History
+        </Button>
+      </div>
+
       {/* Leaderboard Table */}
       <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
         <table className="w-full">
@@ -180,38 +193,38 @@ function PerformerCard({
   feedback: string;
 }) {
   return (
-    <div className="bg-gray-800 rounded-lg p-6 shadow-lg hover:shadow-blue-900/20 transition-all duration-300 hover:-translate-y-1">
-      <div className="flex items-center gap-4 mb-4">
-        <Avatar className="h-12 w-12 border-2 border-gray-700">
+    <div className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-lg hover:shadow-blue-900/20 transition-all duration-300 hover:-translate-y-1">
+      <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap">
+        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-gray-700">
           <AvatarImage src="/placeholder.svg?height=48&width=48" alt={name} />
           <AvatarFallback>{name[0]}</AvatarFallback>
         </Avatar>
-        <div>
-          <div className="font-bold text-lg">{name}</div>
-          <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <div className="font-bold text-base sm:text-lg truncate">{name}</div>
+          <div className="flex items-center gap-2 flex-wrap">
             <div
-              className={`flex items-center rounded-full px-2 py-0.5 text-xs ${
+              className={`flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm ${
                 badge === "challenger" ? "badge-challenger" : "badge-gold"
               }`}
             >
               <div
-                className={`mr-1 w-2 h-2 rounded-full ${
+                className={`mr-1 w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
                   badge === "challenger" ? "dot-challenger" : "dot-gold"
                 }`}
               ></div>
-              Challenger
+              <span className="truncate">Challenger</span>
             </div>
           </div>
         </div>
         <div className="ml-auto">
           <div
-            className={`w-16 h-16 rounded-full ${
+            className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full ${
               trophy === "gold" ? "bg-yellow-600/20" : "bg-gray-400/20"
             } flex items-center justify-center`}
           >
             <svg
               viewBox="0 0 24 24"
-              className={`w-10 h-10 ${
+              className={`w-7 h-7 sm:w-10 sm:h-10 ${
                 trophy === "gold" ? "text-yellow-600" : "text-gray-400"
               }`}
             >
