@@ -1,14 +1,77 @@
 "use client"
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
 import { Sun, Moon, Settings } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import api from "@/lib/api"
+
+interface UserStats {
+  callsMade: number;
+  dealsClosed: number;
+  upsells: number;
+  totalScore: number;
+  rank: "challenger" | "gold" | "silver" | "bronze";
+}
 
 export default function UserProfile() {
   const [view, setView] = useState<"daily" | "overall">("daily")
   const [isDarkMode, setIsDarkMode] = useState(true)
+  const [userStats, setUserStats] = useState<UserStats | null>(null)
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    fetchUserStats()
+    fetchLeaderboardData()
+  }, [])
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await api.get('/performance/leaderboard/me?period=alltime')
+      setUserStats(response.data.data)
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchLeaderboardData = async () => {
+    try {
+      const response = await api.get('/performance/leaderboard?period=alltime')
+      setLeaderboardData(response.data.data || [])
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error)
+    }
+  }
+
+  // Calculate user's ranking position
+  const userRankPosition = leaderboardData.findIndex(entry => entry.userId === user?._id) + 1
+  const totalUsers = leaderboardData.length
+  const rankingPercentage = userRankPosition > 0 ? ((totalUsers - userRankPosition) / totalUsers) * 100 : 0
+
+  // Calculate level and progress
+  const currentLevel = userStats ? Math.floor(userStats.totalScore / 100) : 0
+  const levelProgress = userStats ? (userStats.totalScore % 100) : 0
+  
+  // Calculate call-to-deal conversion rate
+  const conversionRate = userStats && userStats.callsMade > 0 
+    ? Math.round((userStats.dealsClosed / userStats.callsMade) * 100) 
+    : 0
+
+  if (loading) {
+    return (
+      <div className="bg-black/30 rounded-lg p-6 max-w-md w-full mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime"></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-black/30 rounded-lg p-6 max-w-md w-full mx-auto">
@@ -31,15 +94,15 @@ export default function UserProfile() {
             <div className="space-y-1">
               <div className="text-sm text-gray-400">Player Level</div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold">78</span>
-                <Progress value={75} className="w-32 h-2 bg-green-900/30" indicatorClassName="bg-green-500" />
+                <span className="text-xl font-bold">{currentLevel}</span>
+                <Progress value={levelProgress} className="w-32 h-2 bg-green-900/30" />
               </div>
             </div>
             <div className="space-y-1">
               <div className="text-sm text-gray-400">Leaderboard Ranking</div>
               <div className="flex items-center gap-2">
-                <span className="text-sm">1904/5076</span>
-                <Progress value={40} className="w-32 h-2 bg-blue-900/30" indicatorClassName="bg-blue-500" />
+                <span className="text-sm">{userRankPosition > 0 ? `${userRankPosition}/${totalUsers}` : 'N/A'}</span>
+                <Progress value={rankingPercentage} className="w-32 h-2 bg-blue-900/30" />
               </div>
             </div>
           </div>
@@ -76,8 +139,8 @@ export default function UserProfile() {
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <StatHexagon
-          title="Progress"
-          value="80%"
+          title="Goal Progress"
+          value={`${Math.min(Math.round((userStats?.callsMade || 0) / 20 * 100), 100)}%`}
           color="gold"
           icon={
             <svg viewBox="0 0 24 24" className="w-6 h-6">
@@ -87,7 +150,7 @@ export default function UserProfile() {
         />
         <StatHexagon
           title="Calls Made"
-          value="180"
+          value={userStats?.callsMade?.toString() || "0"}
           color="orange"
           icon={
             <svg viewBox="0 0 24 24" className="w-6 h-6">
@@ -99,8 +162,8 @@ export default function UserProfile() {
           }
         />
         <StatHexagon
-          title="Deals Closed"
-          value="78%"
+          title="Conversion Rate"
+          value={`${conversionRate}%`}
           color="blue"
           icon={
             <svg viewBox="0 0 24 24" className="w-6 h-6">
@@ -113,19 +176,19 @@ export default function UserProfile() {
       {/* Additional Stats */}
       <div className="grid grid-cols-3 gap-4 text-center">
         <div>
-          <div className="text-gray-400 text-sm mb-1">AI Feedback</div>
-          <div className="text-xl font-bold">12</div>
-          <div className="text-xs text-gray-500">improvements applied</div>
+          <div className="text-gray-400 text-sm mb-1">Deals Closed</div>
+          <div className="text-xl font-bold">{userStats?.dealsClosed || 0}</div>
+          <div className="text-xs text-gray-500">this week</div>
         </div>
         <div>
           <div className="text-gray-400 text-sm mb-1">Performance Score</div>
-          <div className="text-xl font-bold">12,450</div>
+          <div className="text-xl font-bold">{userStats?.totalScore?.toLocaleString() || '0'}</div>
           <div className="text-xs text-gray-500">points earned</div>
         </div>
         <div>
-          <div className="text-gray-400 text-sm mb-1">Challenges</div>
-          <div className="text-xl font-bold">2</div>
-          <div className="text-xs text-gray-500">challenges completed</div>
+          <div className="text-gray-400 text-sm mb-1">Upsells</div>
+          <div className="text-xl font-bold">{userStats?.upsells || 0}</div>
+          <div className="text-xs text-gray-500">successful upsells</div>
         </div>
       </div>
     </div>

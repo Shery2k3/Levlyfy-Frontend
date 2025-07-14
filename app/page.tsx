@@ -71,7 +71,7 @@ export default function HomePage() {
 
   const fetchUserStats = async () => {
     try {
-      const response = await api.get('/performance/leaderboard/me?period=weekly');
+      const response = await api.get('/performance/leaderboard/me?period=alltime');
       setUserStats(response.data.data);
     } catch (error) {
       console.error('Failed to fetch user stats:', error);
@@ -82,7 +82,7 @@ export default function HomePage() {
 
   const fetchLeaderboardData = async () => {
     try {
-      const response = await api.get('/performance/leaderboard?period=weekly');
+      const response = await api.get('/performance/leaderboard?period=alltime');
       setLeaderboardData(response.data.data?.slice(0, 3) || []); // Top 3
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
@@ -216,30 +216,17 @@ export default function HomePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <CallLogRow
-                      name="Alex Johnson"
-                      phone="(555)-123-4567"
-                      notes="Interested in product demo; prefers afternoon calls."
-                      available={true}
-                    />
-                    <CallLogRow
-                      name="Rachel Green"
-                      phone="(555)-888-1234"
-                      notes="Interested in a demo; prefers morning calls."
-                      available={false}
-                    />
-                    <CallLogRow
-                      name="Monica Geller"
-                      phone="(555)-777-4567"
-                      notes="Requested a pricing breakdown."
-                      available={false}
-                    />
-                    <CallLogRow
-                      name="Chandler Bing"
-                      phone="(555)-333-6789"
-                      notes="Needs help with product configuration."
-                      available={true}
-                    />
+                    {/* FIXME: Replace with dynamic API call once Twilio integration is complete */}
+                    {/* This will be populated with customer data from CRM/Twilio APIs */}
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-gray-400">
+                        <div className="flex flex-col items-center gap-2">
+                          <Phone className="w-8 h-8 text-gray-500" />
+                          <p>Call Logs from Twilio Here:</p>
+                          <p className="text-sm">Features: Auto-dialing, call logging, customer notes</p>
+                        </div>
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -269,6 +256,15 @@ export default function HomePage() {
               </div>
               <div className="border-l-4 border-yellow-400 pl-2 mb-4">
                 <h3 className="text-lg font-bold">Motivational Insights</h3>
+                {/* RECOMMENDATIONS for Dynamic Insights:
+                    1. Performance trends: "Your call-to-deal ratio improved 15% this week"
+                    2. Comparative insights: "You're 3 calls ahead of last week's pace"
+                    3. Goal tracking: "On track to hit monthly target by [date]"
+                    4. Skill insights: "Your average call duration is optimal at 8.5 minutes"
+                    5. Market insights: "Best calling times: 10-11 AM (32% higher success rate)"
+                    6. AI-powered recommendations based on call analysis
+                    7. Seasonal/trend analysis from historical data
+                */}
                 <div className="relative h-12 w-11/12">
                   {motivationalQuotes.map((quote, index) => (
                     <p
@@ -310,6 +306,15 @@ export default function HomePage() {
 
           {/* team highlights */}
           <div>
+            {/* RECOMMENDATIONS for Team Highlights:
+                1. Create /api/performance/team-highlights endpoint
+                2. Aggregate recent achievements: top deals, high call volumes, best sentiment scores
+                3. Real-time updates when team members achieve milestones
+                4. Filter by time period (today, this week, this month)
+                5. Include achievement types: deals_closed, calls_made, sentiment_score, upsells
+                6. Add team member avatars from user profiles
+                7. Notification system for celebrating team wins
+            */}
             <TeamHighlights />
           </div>
 
@@ -320,40 +325,5 @@ export default function HomePage() {
         </div>
       </div>
     </>
-  );
-}
-
-function CallLogRow({
-  name,
-  phone,
-  notes,
-  available,
-}: {
-  name: string;
-  phone: string;
-  notes: string;
-  available: boolean;
-}) {
-  return (
-    <tr className="border-t border-gray-700 hover:bg-gray-700/30 transition-colors">
-      <td className="py-4">{name}</td>
-      <td className="py-4">{phone}</td>
-      <td className="py-4 max-w-[200px] truncate">{notes}</td>
-      <td className="py-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`rounded-full ${
-            available
-              ? "bg-lime/25 hover:bg-lime/40"
-              : "bg-gray-700 hover:bg-gray-600"
-          }`}
-        >
-          <Phone
-            className={`h-5 w-5 ${available ? "text-lime" : "text-gray-400"}`}
-          />
-        </Button>
-      </td>
-    </tr>
   );
 }

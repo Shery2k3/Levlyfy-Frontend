@@ -3,15 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "./ui/progress";
 import { StatHexagon } from "./user-profile";
 import { Switch } from "@/components/ui/switch";
-
 import { Sun, Moon, Settings } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
+
+interface UserStats {
+  callsMade: number;
+  dealsClosed: number;
+  upsells: number;
+  totalScore: number;
+  rank: "challenger" | "gold" | "silver" | "bronze";
+}
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -19,6 +27,54 @@ export default function Navigation() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [view, setView] = useState<"daily" | "overall">("daily");
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  const { logout, user } = useAuth();
+
+  // Fetch user stats when profile dropdown opens
+  useEffect(() => {
+    if (profileDropdownOpen && !userStats) {
+      fetchUserStats();
+      fetchLeaderboardData();
+    }
+  }, [profileDropdownOpen]);
+
+  const fetchUserStats = async () => {
+    setStatsLoading(true);
+    try {
+      const response = await api.get('/performance/leaderboard/me?period=weekly');
+      setUserStats(response.data.data);
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const fetchLeaderboardData = async () => {
+    try {
+      const response = await api.get('/performance/leaderboard?period=weekly');
+      setLeaderboardData(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+    }
+  };
+
+  // Calculate user's ranking position
+  const userRankPosition = leaderboardData.findIndex(entry => entry.userId === user?._id) + 1;
+  const totalUsers = leaderboardData.length;
+  const rankingPercentage = userRankPosition > 0 ? ((totalUsers - userRankPosition) / totalUsers) * 100 : 0;
+
+  // Calculate level and progress
+  const currentLevel = userStats ? Math.floor(userStats.totalScore / 100) : 0;
+  const levelProgress = userStats ? (userStats.totalScore % 100) : 0;
+  
+  // Calculate call-to-deal conversion rate
+  const conversionRate = userStats && userStats.callsMade > 0 
+    ? Math.round((userStats.dealsClosed / userStats.callsMade) * 100) 
+    : 0;
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -31,8 +87,6 @@ export default function Navigation() {
     { href: "/achievements", label: "ACHIEVEMENTS" },
     { href: "/news", label: "NEWS" },
   ];
-
-  const { logout } = useAuth();
 
   const handelLogout = () => {
     console.log("User logged out");
@@ -115,9 +169,9 @@ export default function Navigation() {
                     <div className="space-y-1">
                       <div className="text-sm text-gray-400">Player Level</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xl font-bold">78</span>
+                        <span className="text-xl font-bold">{currentLevel}</span>
                         <Progress
-                          value={75}
+                          value={levelProgress}
                           className="w-24 h-2 bg-green-900/30 bg-green-500"
                         />
                       </div>
@@ -127,15 +181,10 @@ export default function Navigation() {
                         Leaderboard Ranking
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm">1904/5076</span>
+                        <span className="text-sm">{userRankPosition > 0 ? `${userRankPosition}/${totalUsers}` : 'Loading...'}</span>
                         <Progress
-                          value={40}
+                          value={rankingPercentage}
                           className="w-24 h-2 bg-blue-900/30"
-                          style={
-                            {
-                              "--indicator-color": "bg-blue-500",
-                            } as React.CSSProperties
-                          }
                         />
                       </div>
                     </div>
@@ -172,7 +221,6 @@ export default function Navigation() {
                   <Switch
                     checked={!isDarkMode}
                     onCheckedChange={() => setIsDarkMode(!isDarkMode)}
-                    size="sm"
                   />
                   <Sun className="w-4 h-4 text-gray-400" />
                 </div>
@@ -180,63 +228,71 @@ export default function Navigation() {
 
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-3 mb-6">
-                <StatHexagon
-                  title="Progress"
-                  value="80%"
-                  color="gold"
-                  icon={
-                    <svg viewBox="0 0 24 24" className="w-5 h-5">
-                      <path
-                        d="M20 12l-6-6v5H6v2h8v5l6-6z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  }
-                />
-                <StatHexagon
-                  title="Calls Made"
-                  value="180"
-                  color="orange"
-                  icon={
-                    <svg viewBox="0 0 24 24" className="w-5 h-5">
-                      <path
-                        d="M20 15.5c-1.2 0-2.4-.2-3.6-.6-.3-.1-.7 0-1 .2l-2.2 2.2c-2.8-1.4-5.1-3.8-6.6-6.6l2.2-2.2c.3-.3.4-.7.2-1-.3-1.1-.5-2.3-.5-3.5 0-.6-.4-1-1-1H4c-.6 0-1 .4-1 1 0 9.4 7.6 17 17 17 .6 0 1-.4 1-1v-3.5c0-.6-.4-1-1-1zM21 6h-3V3h-2v3h-3v2h3v3h2V8h3z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  }
-                />
-                <StatHexagon
-                  title="Deals Closed"
-                  value="78%"
-                  color="blue"
-                  icon={
-                    <svg viewBox="0 0 24 24" className="w-5 h-5">
-                      <path
-                        d="M21 7L9 19l-5.5-5.5 1.41-1.41L9 16.17 19.59 5.59 21 7z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  }
-                />
+                {statsLoading ? (
+                  <div className="col-span-3 text-center text-gray-400 py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-lime mx-auto"></div>
+                  </div>
+                ) : (
+                  <>
+                    <StatHexagon
+                      title="Goal Progress"
+                      value={`${Math.min(Math.round((userStats?.callsMade || 0) / 20 * 100), 100)}%`}
+                      color="gold"
+                      icon={
+                        <svg viewBox="0 0 24 24" className="w-5 h-5">
+                          <path
+                            d="M20 12l-6-6v5H6v2h8v5l6-6z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      }
+                    />
+                    <StatHexagon
+                      title="Calls Made"
+                      value={userStats?.callsMade?.toString() || "0"}
+                      color="orange"
+                      icon={
+                        <svg viewBox="0 0 24 24" className="w-5 h-5">
+                          <path
+                            d="M20 15.5c-1.2 0-2.4-.2-3.6-.6-.3-.1-.7 0-1 .2l-2.2 2.2c-2.8-1.4-5.1-3.8-6.6-6.6l2.2-2.2c.3-.3.4-.7.2-1-.3-1.1-.5-2.3-.5-3.5 0-.6-.4-1-1-1H4c-.6 0-1 .4-1 1 0 9.4 7.6 17 17 17 .6 0 1-.4 1-1v-3.5c0-.6-.4-1-1-1zM21 6h-3V3h-2v3h-3v2h3v3h2V8h3z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      }
+                    />
+                    <StatHexagon
+                      title="Conversion Rate"
+                      value={`${conversionRate}%`}
+                      color="blue"
+                      icon={
+                        <svg viewBox="0 0 24 24" className="w-5 h-5">
+                          <path
+                            d="M21 7L9 19l-5.5-5.5 1.41-1.41L9 16.17 19.59 5.59 21 7z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      }
+                    />
+                  </>
+                )}
               </div>
 
               {/* Additional Stats */}
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
-                  <div className="text-gray-400 text-xs mb-1">AI Feedback</div>
-                  <div className="text-lg font-bold">12</div>
-                  <div className="text-xxs text-gray-500">improvements</div>
+                  <div className="text-gray-400 text-xs mb-1">Deals Closed</div>
+                  <div className="text-lg font-bold">{userStats?.dealsClosed || 0}</div>
+                  <div className="text-xxs text-gray-500">this week</div>
                 </div>
                 <div>
                   <div className="text-gray-400 text-xs mb-1">Performance</div>
-                  <div className="text-lg font-bold">12,450</div>
+                  <div className="text-lg font-bold">{userStats?.totalScore?.toLocaleString() || '0'}</div>
                   <div className="text-xxs text-gray-500">points</div>
                 </div>
                 <div>
-                  <div className="text-gray-400 text-xs mb-1">Challenges</div>
-                  <div className="text-lg font-bold">2</div>
-                  <div className="text-xxs text-gray-500">completed</div>
+                  <div className="text-gray-400 text-xs mb-1">Upsells</div>
+                  <div className="text-lg font-bold">{userStats?.upsells || 0}</div>
+                  <div className="text-xxs text-gray-500">successful</div>
                 </div>
               </div>
               {/* logout button */}
