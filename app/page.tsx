@@ -16,20 +16,78 @@ import {
 import TeamHighlights from "@/components/team-highlights";
 import LeaderboardHighlights from "@/components/leaderboard-highlights";
 import CallScreen from "@/components/call-screen";
+import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
 
 export default function HomePage() {
-  const [callProgress, setCallProgress] = useState(60);
-  const [dealsProgress, setDealsProgress] = useState(75);
   const [isCalling, setIsCalling] = useState(false);
   const [currentQuote, setCurrentQuote] = useState(0);
+  const [userStats, setUserStats] = useState<any>(null);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const motivationalQuotes = [
-    "You're only 5 calls away from reaching today's goal—keep going!",
-    "Your closing rate is 12% higher than last week—great improvement!",
-    "You're currently ranked #3 in your team—keep up the momentum!",
-    "Customers rate your communication 4.8/5 stars—excellent work!",
-    "Your average call duration has improved by 2 minutes—great focus!",
-  ];
+  const generateMotivationalQuotes = (stats: any, level: number) => {
+    if (!stats) return ["Keep up the great work!"];
+    
+    const quotes = [];
+    const callsToGoal = Math.max(0, 20 - stats.callsMade);
+    const dealsToGoal = Math.max(0, 5 - stats.dealsClosed);
+    
+    if (callsToGoal > 0) {
+      quotes.push(`You're only ${callsToGoal} calls away from reaching today's goal—keep going!`);
+    } else {
+      quotes.push("Amazing! You've exceeded your daily call goal—great momentum!");
+    }
+    
+    if (stats.dealsClosed > 0) {
+      quotes.push(`Excellent work! You've closed ${stats.dealsClosed} deals this week!`);
+    }
+    
+    if (stats.totalScore > 0) {
+      quotes.push(`Your total score of ${stats.totalScore} shows real progress—keep building!`);
+    }
+    
+    if (stats.upsells > 0) {
+      quotes.push(`Great upselling! You've achieved ${stats.upsells} upsells this week!`);
+    }
+    
+    quotes.push(`You're currently level ${level}—each call brings you closer to the next level!`);
+    
+    return quotes;
+  };
+
+  // Calculate progress percentages and level
+  const callsProgress = userStats ? Math.min((userStats.callsMade / 20) * 100, 100) : 0; // Goal: 20 calls
+  const dealsProgress = userStats ? Math.min((userStats.dealsClosed / 5) * 100, 100) : 0; // Goal: 5 deals
+  const currentLevel = userStats ? Math.floor(userStats.totalScore / 100) : 0; // 100 points per level
+
+  const motivationalQuotes = generateMotivationalQuotes(userStats, currentLevel);
+
+  useEffect(() => {
+    fetchUserStats();
+    fetchLeaderboardData();
+  }, []);
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await api.get('/performance/leaderboard/me?period=weekly');
+      setUserStats(response.data.data);
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLeaderboardData = async () => {
+    try {
+      const response = await api.get('/performance/leaderboard?period=weekly');
+      setLeaderboardData(response.data.data?.slice(0, 3) || []); // Top 3
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+    }
+  };
 
   useEffect(() => {
     const quoteInterval = setInterval(() => {
@@ -39,22 +97,13 @@ export default function HomePage() {
     return () => clearInterval(quoteInterval);
   }, []);
 
-  // Simulate progress updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCallProgress((prev) => {
-        const newValue = prev + (Math.random() > 0.5 ? 1 : -1);
-        return Math.min(Math.max(newValue, 55), 65);
-      });
-
-      setDealsProgress((prev) => {
-        const newValue = prev + (Math.random() > 0.5 ? 0.5 : -0.5);
-        return Math.min(Math.max(newValue, 70), 80);
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -68,7 +117,7 @@ export default function HomePage() {
               <div className="flex flex-col md:flex-row">
                 <div className="p-6 md:p-8 flex flex-col justify-center">
                   <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                    Hello, Robert
+                    Hello, {user?.name || 'User'}
                   </h1>
                   <p className="text-slate-300 mb-6">
                     Welcome Back to Level up CRM
@@ -78,7 +127,7 @@ export default function HomePage() {
                       <Star className="w-6 h-6 text-blue-400" />
                     </div>
                     <span className="text-xl font-bold">
-                      Level 3: Rising Star
+                      Level {currentLevel}: {currentLevel >= 5 ? 'Sales Master' : currentLevel >= 3 ? 'Rising Star' : 'Rookie'}
                     </span>
                   </div>
                 </div>
@@ -99,10 +148,10 @@ export default function HomePage() {
               <h2 className="text-xl font-bold mb-2">Daily Goal</h2>
               <div className="flex-1 flex flex-col items-center justify-center">
                 <ProgressRing
-                  progress={callProgress}
+                  progress={callsProgress}
                   size={120}
                   strokeWidth={12}
-                  text="15/25"
+                  text={`${userStats?.callsMade || 0}/20`}
                   textClassName="text-xl font-bold"
                 />
                 <p className="text-success text-sm mt-2">calls completed</p>
@@ -115,25 +164,24 @@ export default function HomePage() {
             <h2 className="text-gray-500 uppercase font-bold mb-2">DEALS</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <div className="text-4xl font-bold">235</div>
-                <div className="text-sm text-gray-400">Total</div>
-                <div className="text-lime font-bold">25.75%</div>
+                <div className="text-4xl font-bold">{userStats?.callsMade || 0}</div>
+                <div className="text-sm text-gray-400">Total Calls</div>
+                <div className="text-lime font-bold">This Week</div>
               </div>
               <div>
-                <div className="text-4xl font-bold">185</div>
-                <div className="text-sm text-gray-400">Closed</div>
-                <div className="h-2 mt-2 bg-blue-900 rounded-full"></div>
+                <div className="text-4xl font-bold">{userStats?.dealsClosed || 0}</div>
+                <div className="text-sm text-gray-400">Deals Closed</div>
+                <div className="h-2 mt-2 bg-green-700 rounded-full"></div>
               </div>
               <div>
-                <div className="text-4xl font-bold">20</div>
-                <div className="text-sm text-gray-400">In progress</div>
-                <div className="h-2 mt-2 bg-red-900 rounded-full"></div>
+                <div className="text-4xl font-bold">{userStats?.upsells || 0}</div>
+                <div className="text-sm text-gray-400">Upsells</div>
+                <div className="h-2 mt-2 bg-blue-700 rounded-full"></div>
               </div>
             </div>
             <Progress
               value={dealsProgress}
               className="h-2 mt-4 bg-lime/25"
-              indicatorClassName="bg-lime"
             />
           </div>
 
@@ -267,7 +315,7 @@ export default function HomePage() {
 
           {/* leaderboard highlights */}
           <div>
-            <LeaderboardHighlights />
+            <LeaderboardHighlights data={leaderboardData} />
           </div>
         </div>
       </div>

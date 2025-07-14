@@ -4,7 +4,22 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
-export default function LeaderboardHighlights() {
+interface LeaderboardEntry {
+  place: number;
+  userId: string;
+  name: string;
+  callsMade: number;
+  dealsClosed: number;
+  upsells: number;
+  totalScore: number;
+  rank: "challenger" | "gold" | "silver" | "bronze";
+}
+
+interface LeaderboardHighlightsProps {
+  data?: LeaderboardEntry[];
+}
+
+export default function LeaderboardHighlights({ data = [] }: LeaderboardHighlightsProps) {
   const [isHovered, setIsHovered] = useState<number | null>(null)
 
   return (
@@ -28,39 +43,28 @@ export default function LeaderboardHighlights() {
             </tr>
           </thead>
           <tbody>
-            <LeaderboardRow
-              place={1}
-              name="Alex Johnson"
-              calls="65 (650)"
-              deals="15 (750)"
-              score="4,200"
-              rank="challenger"
-              isHovered={isHovered === 1}
-              onHover={() => setIsHovered(1)}
-              onLeave={() => setIsHovered(null)}
-            />
-            <LeaderboardRow
-              place={2}
-              name="Mia Chen"
-              calls="65 (650)"
-              deals="15 (750)"
-              score="4,200"
-              rank="challenger"
-              isHovered={isHovered === 2}
-              onHover={() => setIsHovered(2)}
-              onLeave={() => setIsHovered(null)}
-            />
-            <LeaderboardRow
-              place={3}
-              name="Liam Smith"
-              calls="65 (650)"
-              deals="15 (750)"
-              score="4,200"
-              rank="gold"
-              isHovered={isHovered === 3}
-              onHover={() => setIsHovered(3)}
-              onLeave={() => setIsHovered(null)}
-            />
+            {data.length > 0 ? (
+              data.slice(0, 3).map((entry, index) => (
+                <LeaderboardRow
+                  key={entry.userId}
+                  place={entry.place}
+                  name={entry.name}
+                  calls={`${entry.callsMade} (${entry.callsMade * 10})`}
+                  deals={`${entry.dealsClosed} (${entry.dealsClosed * 50})`}
+                  score={entry.totalScore.toLocaleString()}
+                  rank={entry.rank}
+                  isHovered={isHovered === index}
+                  onHover={() => setIsHovered(index)}
+                  onLeave={() => setIsHovered(null)}
+                />
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="py-4 text-center text-gray-400">
+                  No leaderboard data available
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -84,7 +88,7 @@ function LeaderboardRow({
   calls: string
   deals: string
   score: string
-  rank: "challenger" | "gold"
+  rank: "challenger" | "gold" | "silver" | "bronze"
   isHovered: boolean
   onHover: () => void
   onLeave: () => void
@@ -115,11 +119,17 @@ function LeaderboardRow({
       <td className="py-2">
         <div
           className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${
-            rank === "challenger" ? "badge-challenger" : "badge-gold"
+            rank === "challenger" ? "badge-challenger" : 
+            rank === "gold" ? "badge-gold" :
+            rank === "silver" ? "badge-silver" : "badge-bronze"
           }`}
         >
-          {rank === "challenger" ? "Challenger" : "Gold"}
-          <div className={`ml-1 w-3 h-3 rounded-full ${rank === "challenger" ? "dot-challenger" : "dot-gold"}`}></div>
+          {rank.charAt(0).toUpperCase() + rank.slice(1)}
+          <div className={`ml-1 w-3 h-3 rounded-full ${
+            rank === "challenger" ? "dot-challenger" : 
+            rank === "gold" ? "dot-gold" :
+            rank === "silver" ? "dot-silver" : "dot-bronze"
+          }`}></div>
         </div>
       </td>
     </tr>
