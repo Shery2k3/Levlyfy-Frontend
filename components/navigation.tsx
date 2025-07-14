@@ -8,8 +8,7 @@ import { ChevronDown, ChevronUp, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "./ui/progress";
 import { StatHexagon } from "./user-profile";
-import { Switch } from "@/components/ui/switch";
-import { Sun, Moon, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
@@ -25,7 +24,6 @@ export default function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [view, setView] = useState<"daily" | "overall">("daily");
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
@@ -192,8 +190,8 @@ export default function Navigation() {
                 </div>
               </div>
 
-              {/* View Toggle & Dark Mode */}
-              <div className="flex items-center justify-between mb-6">
+              {/* View Toggle */}
+              <div className="flex items-center justify-center mb-6">
                 <div className="flex">
                   <button
                     className={`px-3 py-1 text-sm font-medium transition-colors rounded ${
@@ -215,14 +213,6 @@ export default function Navigation() {
                   >
                     OVERALL
                   </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Moon className="w-4 h-4 text-gray-400" />
-                  <Switch
-                    checked={!isDarkMode}
-                    onCheckedChange={() => setIsDarkMode(!isDarkMode)}
-                  />
-                  <Sun className="w-4 h-4 text-gray-400" />
                 </div>
               </div>
 
