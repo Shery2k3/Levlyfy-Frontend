@@ -155,7 +155,7 @@ export default function PerformanceChart({ data = [], isLoading = false }: Perfo
     ctx.fillStyle = "#9CA3AF"
     for (let i = 0; i < periods.length; i += Math.max(1, Math.floor(periods.length / 6))) {
       const x = padding + (i / (periods.length - 1)) * chartWidth
-      ctx.fillText(periods[i], x, canvas.offsetHeight - 10)
+      ctx.fillText(periods[i], x, canvas.offsetHeight - 25) // Move labels up to make room for legends
     }
 
     // Draw the lines - always draw calls line, others only if they have data
@@ -171,10 +171,10 @@ export default function PerformanceChart({ data = [], isLoading = false }: Perfo
   }, [windowWidth, data, isLoading])
 
   return (
-    <div className="h-[200px] w-full relative">
-      <canvas ref={canvasRef} className="w-full h-full"></canvas>
-      {/* Legend */}
-      <div className="absolute bottom-2 right-2 flex gap-4 text-xs">
+    <div className="h-[220px] w-full relative">
+      <canvas ref={canvasRef} className="w-full h-[200px]"></canvas>
+      {/* Legend - moved to bottom with proper spacing */}
+      <div className="absolute bottom-0 right-2 flex gap-4 text-xs">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
           <span className="text-gray-400">Calls</span>
