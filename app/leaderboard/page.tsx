@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface LeaderboardEntry {
   place: number;
@@ -32,7 +33,7 @@ export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRank, setUserRank] = useState<number | null>(null);
+  const { user } = useAuth(); // Get current user from auth context
 
   useEffect(() => {
     fetchLeaderboardData();
@@ -56,21 +57,9 @@ export default function LeaderboardPage() {
     try {
       const response = await api.get(`/performance/leaderboard/me?period=${timePeriod}`);
       setUserStats(response.data.data || null);
-      
-      // Find user's rank in leaderboard
-      const userIndex = leaderboardData.findIndex(entry => entry.userId === response.data.data?.userId);
-      setUserRank(userIndex !== -1 ? userIndex + 1 : null);
     } catch (error) {
       console.error("Failed to fetch user stats:", error);
       setUserStats(null);
-    }
-  };
-
-  const showMyPlace = () => {
-    if (userRank) {
-      alert(`Your place is ${userRank}!`);
-    } else {
-      alert("You're not ranked yet. Make some calls to get on the leaderboard!");
     }
   };
 
@@ -137,13 +126,6 @@ export default function LeaderboardPage() {
               <TabsTrigger value="all-time">All-Time</TabsTrigger>
             </TabsList>
           </Tabs>
-
-          <Button
-            onClick={showMyPlace}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all"
-          >
-            Show My Place
-          </Button>
         </div>
       </div>
 
@@ -201,7 +183,10 @@ export default function LeaderboardPage() {
                 {activeTab === "calls-made" ? "Calls Made" : 
                  activeTab === "deals-closed" ? "Deals Closed" : "Upsells"}
               </th>
-              <th className="py-3 px-4 text-left">Deals Closed</th>
+              <th className="py-3 px-4 text-left">
+                {activeTab === "calls-made" ? "Deals Closed" : 
+                 activeTab === "deals-closed" ? "Calls Made" : "Deals Closed"}
+              </th>
               <th className="py-3 px-4 text-left">Total Score</th>
               <th className="py-3 px-4 text-left">Rank</th>
             </tr>
@@ -227,9 +212,12 @@ export default function LeaderboardPage() {
                   calls={activeTab === "calls-made" ? entry.callsMade.toString() : 
                          activeTab === "deals-closed" ? entry.dealsClosed.toString() : 
                          entry.upsells.toString()}
-                  deals={entry.dealsClosed.toString()}
+                  deals={activeTab === "calls-made" ? entry.dealsClosed.toString() : 
+                         activeTab === "deals-closed" ? entry.callsMade.toString() : 
+                         entry.dealsClosed.toString()}
                   score={entry.totalScore.toString()}
                   rank={entry.rank}
+                  isCurrentUser={user?._id === entry.userId}
                 />
               ))
             ) : (
@@ -365,6 +353,7 @@ function LeaderboardRow({
   deals,
   score,
   rank,
+  isCurrentUser = false,
 }: {
   place: number;
   name: string;
@@ -372,6 +361,7 @@ function LeaderboardRow({
   deals: string;
   score: string;
   rank: "challenger" | "gold" | "silver" | "bronze";
+  isCurrentUser?: boolean;
 }) {
   // Helper function to get badge styling
   const getBadgeStyle = (rank: string) => {
@@ -408,6 +398,8 @@ function LeaderboardRow({
     <tr
       className={`${
         place % 2 === 0 ? "bg-gray-700/50" : ""
+      } ${
+        isCurrentUser ? "bg-blue-900/30 border-l-4 border-blue-500" : ""
       } hover:bg-gray-600/50 transition-colors`}
     >
       <td className="py-4 px-4">
@@ -427,7 +419,7 @@ function LeaderboardRow({
           </div>
         </div>
       </td>
-      <td className="py-4 px-4">{name}</td>
+      <td className="py-4 px-4">{name}{isCurrentUser && <span className="ml-2 text-blue-400 text-sm">(You)</span>}</td>
       <td className="py-4 px-4">
         <div>
           {calls}
