@@ -2,7 +2,19 @@
 
 import { useEffect, useRef, useState } from "react"
 
-export default function PerformanceChart() {
+interface PerformanceData {
+  callsMade: number;
+  dealsClosed: number;
+  upsells: number;
+  period: string;
+}
+
+interface PerformanceChartProps {
+  data?: PerformanceData[];
+  isLoading?: boolean;
+}
+
+export default function PerformanceChart({ data = [], isLoading = false }: PerformanceChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [windowWidth, setWindowWidth] = useState(0)
 
@@ -33,45 +45,56 @@ export default function PerformanceChart() {
     canvas.style.width = `${canvas.offsetWidth}px`
     canvas.style.height = `${canvas.offsetHeight}px`
 
-    // Sample data for three lines
-    const weeks = [
-      "Week 1",
-      "Week 2",
-      "Week 3",
-      "Week 4",
-      "Week 5",
-      "Week 6",
-      "Week 7",
-      "Week 8",
-      "Week 9",
-      "Week 10",
-      "Week 11",
-      "Week 12",
-    ]
-    const data1 = [55, 80, 65, 30, 50, 75, 65, 85, 70, 60, 80, 75]
-    const data2 = [40, 60, 50, 20, 40, 60, 50, 70, 50, 40, 60, 55]
-    const data3 = [60, 90, 75, 25, 45, 65, 60, 80, 65, 55, 75, 65]
-
-    // Chart config
-    const padding = 30
-    const chartWidth = canvas.offsetWidth - padding * 2
-    const chartHeight = canvas.offsetHeight - padding * 2
-    const maxValue = 100
-
     // Clear canvas
     ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight)
 
+    if (isLoading) {
+      // Show loading state
+      ctx.fillStyle = "#666"
+      ctx.font = "14px Arial"
+      ctx.textAlign = "center"
+      ctx.fillText("Loading performance data...", canvas.offsetWidth / 2, canvas.offsetHeight / 2)
+      return
+    }
+
+    if (data.length === 0) {
+      // Show empty state with better styling
+      ctx.fillStyle = "#6B7280"
+      ctx.font = "16px Arial"
+      ctx.textAlign = "center"
+      ctx.fillText("Start making calls to see your", canvas.offsetWidth / 2, canvas.offsetHeight / 2 - 10)
+      ctx.fillText("performance trends here!", canvas.offsetWidth / 2, canvas.offsetHeight / 2 + 10)
+      return
+    }
+
+    // Prepare data arrays
+    const periods = data.map((_, index) => `W${index + 1}`)
+    const callsData = data.map(d => d.callsMade)
+    const dealsData = data.map(d => d.dealsClosed)
+    const upsellsData = data.map(d => d.upsells)
+
+    // Find max value for scaling
+    const maxCalls = Math.max(...callsData)
+    const maxDeals = Math.max(...dealsData)
+    const maxUpsells = Math.max(...upsellsData)
+    const maxValue = Math.max(maxCalls, maxDeals, maxUpsells, 10) // Minimum 10 for better scaling
+
+    // Chart config
+    const padding = 40
+    const chartWidth = canvas.offsetWidth - padding * 2
+    const chartHeight = canvas.offsetHeight - padding * 2
+
     // Draw grid lines and labels
     ctx.lineWidth = 0.5
-    ctx.strokeStyle = "#333"
-    ctx.fillStyle = "#aaa"
+    ctx.strokeStyle = "#374151"
+    ctx.fillStyle = "#9CA3AF"
     ctx.font = "10px Arial"
     ctx.textAlign = "right"
 
     // Y-axis grid lines and labels
     for (let i = 0; i <= 5; i++) {
       const y = padding + (chartHeight / 5) * i
-      const value = maxValue - (maxValue / 5) * i
+      const value = Math.round(maxValue - (maxValue / 5) * i)
 
       ctx.beginPath()
       ctx.moveTo(padding, y)
@@ -83,6 +106,8 @@ export default function PerformanceChart() {
 
     // Draw lines
     function drawLine(data: number[], color: string, fill = false) {
+      if (!ctx) return;
+      
       ctx.beginPath()
       ctx.lineWidth = 2
       ctx.strokeStyle = color
@@ -119,33 +144,51 @@ export default function PerformanceChart() {
         ctx.arc(x, y, 4, 0, Math.PI * 2)
         ctx.fillStyle = color
         ctx.fill()
-        ctx.strokeStyle = "#222"
+        ctx.strokeStyle = "#1F2937"
         ctx.lineWidth = 1
         ctx.stroke()
       }
     }
 
-    // Draw x-axis labels (abbreviated for space)
+    // Draw x-axis labels
     ctx.textAlign = "center"
-    for (let i = 0; i < weeks.length; i += 2) {
-      const x = padding + (i / (weeks.length - 1)) * chartWidth
-      ctx.fillText(i + 1 + "", x, canvas.offsetHeight - 10)
+    ctx.fillStyle = "#9CA3AF"
+    for (let i = 0; i < periods.length; i += Math.max(1, Math.floor(periods.length / 6))) {
+      const x = padding + (i / (periods.length - 1)) * chartWidth
+      ctx.fillText(periods[i], x, canvas.offsetHeight - 10)
     }
 
-    // Draw the lines with animation
-    const animateLines = () => {
-      // Draw the lines
-      drawLine(data3, "#f06292", true) // Pink
-      drawLine(data1, "#ff9800", true) // Orange
-      drawLine(data2, "#2196f3", true) // Blue
+    // Draw the lines
+    if (upsellsData.some(v => v > 0)) {
+      drawLine(upsellsData, "#A855F7", true) // Purple for upsells
+    }
+    if (dealsData.some(v => v > 0)) {
+      drawLine(dealsData, "#10B981", true) // Green for deals closed
+    }
+    if (callsData.some(v => v > 0)) {
+      drawLine(callsData, "#3B82F6", true) // Blue for calls made
     }
 
-    animateLines()
-  }, [windowWidth])
+  }, [windowWidth, data, isLoading])
 
   return (
-    <div className="h-[200px] w-full">
+    <div className="h-[200px] w-full relative">
       <canvas ref={canvasRef} className="w-full h-full"></canvas>
+      {/* Legend */}
+      <div className="absolute bottom-2 right-2 flex gap-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+          <span className="text-gray-400">Calls</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <span className="text-gray-400">Deals</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+          <span className="text-gray-400">Upsells</span>
+        </div>
+      </div>
     </div>
   )
 }
