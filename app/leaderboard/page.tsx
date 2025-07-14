@@ -1,14 +1,92 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
+
+interface LeaderboardEntry {
+  place: number;
+  userId: string;
+  name: string;
+  callsMade: number;
+  dealsClosed: number;
+  upsells: number;
+  totalScore: number;
+  rank: "challenger" | "gold";
+}
+
+interface UserStats {
+  callsMade: number;
+  dealsClosed: number;
+  upsells: number;
+  totalScore: number;
+  rank: "challenger" | "gold";
+}
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState("calls-made");
   const [timePeriod, setTimePeriod] = useState("weekly");
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userRank, setUserRank] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchLeaderboardData();
+    fetchUserStats();
+  }, [timePeriod]);
+
+  const fetchLeaderboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/performance/leaderboard?period=${timePeriod}`);
+      setLeaderboardData(response.data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch leaderboard:", error);
+      setLeaderboardData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await api.get(`/performance/leaderboard/me?period=${timePeriod}`);
+      setUserStats(response.data.data || null);
+      
+      // Find user's rank in leaderboard
+      const userIndex = leaderboardData.findIndex(entry => entry.userId === response.data.data?.userId);
+      setUserRank(userIndex !== -1 ? userIndex + 1 : null);
+    } catch (error) {
+      console.error("Failed to fetch user stats:", error);
+      setUserStats(null);
+    }
+  };
+
+  const showMyPlace = () => {
+    if (userRank) {
+      alert(`Your place is ${userRank}!`);
+    } else {
+      alert("You're not ranked yet. Make some calls to get on the leaderboard!");
+    }
+  };
+
+  // Filter data based on active tab
+  const getFilteredData = () => {
+    if (activeTab === "deals-closed") {
+      return [...leaderboardData].sort((a, b) => b.dealsClosed - a.dealsClosed);
+    } else if (activeTab === "upsells") {
+      return [...leaderboardData].sort((a, b) => b.upsells - a.upsells);
+    }
+    // Default: calls-made (sorted by callsMade)
+    return [...leaderboardData].sort((a, b) => b.callsMade - a.callsMade);
+  };
+
+  const topPerformers = getFilteredData().slice(0, 3);
+  const tableData = getFilteredData();
 
   return (
     <div className="px-4 md:px-8 py-4 space-y-6">
@@ -61,7 +139,7 @@ export default function LeaderboardPage() {
           </Tabs>
 
           <Button
-            onClick={() => alert("Your place is 1st!")}
+            onClick={showMyPlace}
             className="bg-gray-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all"
           >
             Show My Place
@@ -71,30 +149,32 @@ export default function LeaderboardPage() {
 
       {/* Top Performers Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <PerformerCard
-          name="Rootless"
-          badge="challenger"
-          trophy="gold"
-          calls="40 - 67"
-          deals="157"
-          feedback="67%"
-        />
-        <PerformerCard
-          name="Knight"
-          badge="challenger"
-          trophy="silver"
-          calls="40 - 67"
-          deals="157"
-          feedback="67%"
-        />
-        <PerformerCard
-          name="Ninja"
-          badge="challenger"
-          trophy="gold"
-          calls="40 - 67"
-          deals="157"
-          feedback="67%"
-        />
+        {loading ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-lg animate-pulse">
+              <div className="h-16 bg-gray-700 rounded mb-4"></div>
+              <div className="h-4 bg-gray-700 rounded mb-2"></div>
+              <div className="h-4 bg-gray-700 rounded mb-4"></div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="h-1 bg-gray-700 rounded"></div>
+                <div className="h-1 bg-gray-700 rounded"></div>
+                <div className="h-1 bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          ))
+        ) : (
+          topPerformers.map((performer, index) => (
+            <PerformerCard
+              key={performer.userId}
+              name={performer.name}
+              badge={performer.rank}
+              trophy={index === 0 ? "gold" : "silver"}
+              calls={performer.callsMade.toString()}
+              deals={performer.dealsClosed.toString()}
+              feedback={performer.upsells.toString()}
+            />
+          ))
+        )}
       </div>
 
       {/* Action Buttons - Responsive */}
@@ -116,65 +196,54 @@ export default function LeaderboardPage() {
           <thead>
             <tr className="bg-gray-700 text-gray-300">
               <th className="py-3 px-4 text-left">Place</th>
-              <th className="py-3 px-4 text-left">Agent ID</th>
-              <th className="py-3 px-4 text-left">Calls Made</th>
+              <th className="py-3 px-4 text-left">Agent Name</th>
+              <th className="py-3 px-4 text-left">
+                {activeTab === "calls-made" ? "Calls Made" : 
+                 activeTab === "deals-closed" ? "Deals Closed" : "Upsells"}
+              </th>
               <th className="py-3 px-4 text-left">Deals Closed</th>
               <th className="py-3 px-4 text-left">Total Score</th>
               <th className="py-3 px-4 text-left">Rank</th>
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: 10 }).map((_, index) => (
-              <LeaderboardRow
-                key={index}
-                place={index + 1}
-                name={getRandomName()}
-                calls={`${Math.floor(Math.random() * 30) + 40} (${
-                  Math.floor(Math.random() * 300) + 400
-                })`}
-                deals={`${Math.floor(Math.random() * 10) + 10} (${
-                  Math.floor(Math.random() * 300) + 400
-                })`}
-                score={`${Math.floor(Math.random() * 1000) + 3000}`}
-                rank={Math.random() > 0.5 ? "challenger" : "gold"}
-              />
-            ))}
+            {loading ? (
+              Array.from({ length: 10 }).map((_, index) => (
+                <tr key={index} className="animate-pulse">
+                  <td className="py-4 px-4"><div className="h-8 w-8 bg-gray-700 rounded-full"></div></td>
+                  <td className="py-4 px-4"><div className="h-4 bg-gray-700 rounded w-24"></div></td>
+                  <td className="py-4 px-4"><div className="h-4 bg-gray-700 rounded w-16"></div></td>
+                  <td className="py-4 px-4"><div className="h-4 bg-gray-700 rounded w-16"></div></td>
+                  <td className="py-4 px-4"><div className="h-4 bg-gray-700 rounded w-16"></div></td>
+                  <td className="py-4 px-4"><div className="h-4 bg-gray-700 rounded w-20"></div></td>
+                </tr>
+              ))
+            ) : tableData.length > 0 ? (
+              tableData.map((entry, index) => (
+                <LeaderboardRow
+                  key={entry.userId}
+                  place={index + 1}
+                  name={entry.name}
+                  calls={activeTab === "calls-made" ? entry.callsMade.toString() : 
+                         activeTab === "deals-closed" ? entry.dealsClosed.toString() : 
+                         entry.upsells.toString()}
+                  deals={entry.dealsClosed.toString()}
+                  score={entry.totalScore.toString()}
+                  rank={entry.rank}
+                />
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="py-8 px-4 text-center text-gray-400">
+                  No leaderboard data available
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
-}
-
-function getRandomName() {
-  const firstNames = [
-    "Alex",
-    "Mia",
-    "Liam",
-    "Olivia",
-    "Noah",
-    "Emma",
-    "James",
-    "Sophia",
-    "William",
-    "Isabella",
-  ];
-  const lastNames = [
-    "Johnson",
-    "Chen",
-    "Smith",
-    "García",
-    "Brown",
-    "Davis",
-    "Miller",
-    "Wilson",
-    "Moore",
-    "Taylor",
-  ];
-
-  return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${
-    lastNames[Math.floor(Math.random() * lastNames.length)]
-  }`;
 }
 
 function PerformerCard({
@@ -212,7 +281,7 @@ function PerformerCard({
                   badge === "challenger" ? "dot-challenger" : "dot-gold"
                 }`}
               ></div>
-              <span className="truncate">Challenger</span>
+              <span className="truncate">{badge === "challenger" ? "Challenger" : "Gold"}</span>
             </div>
           </div>
         </div>
@@ -244,7 +313,7 @@ function PerformerCard({
       <div className="grid grid-cols-3 text-center text-sm mb-2">
         <div>Calls Made</div>
         <div>Deals Closed</div>
-        <div>AI Feedback Followed</div>
+        <div>Upsells</div>
       </div>
 
       <div className="grid grid-cols-3 text-center text-gray-300 mb-4">
