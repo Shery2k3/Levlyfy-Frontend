@@ -107,45 +107,45 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="flex flex-row px-4 md:px-8 py-4 space-y-6 space-x-6">
+      <div className="flex flex-col lg:flex-row px-4 md:px-8 py-4 gap-6">
         {/* left div */}
-        <div className="flex flex-col space-y-6 w-1/2">
+        <div className="flex flex-col space-y-6 w-full lg:w-1/2">
           {/* welcome and daily goals */}
-          <div className="w-full flex flex-row space-x-10">
+          <div className="w-full flex flex-col lg:flex-row gap-6">
             {/* welcome card */}
-            <div className="lg:col-span-2 card-gradient rounded-lg overflow-hidden shadow-lg">
+            <div className="flex-1 card-gradient rounded-lg overflow-hidden shadow-lg">
               <div className="flex flex-col md:flex-row">
-                <div className="p-6 md:p-8 flex flex-col justify-center">
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                    Hello, {user?.name || 'User'}
+                <div className="p-6 md:p-8 flex flex-col justify-center flex-1">
+                  <h1 className="text-2xl lg:text-3xl font-bold mb-2">
+                    Hello, {user?.name || 'User'}!
                   </h1>
-                  <p className="text-slate-300 mb-6">
+                  <p className="text-slate-300 mb-4">
                     Welcome Back to Level up CRM
                   </p>
                   <div className="flex items-center gap-2">
                     <div className="p-2 bg-blue-900 rounded-lg">
-                      <Star className="w-6 h-6 text-blue-400" />
+                      <Star className="w-5 h-5 text-blue-400" />
                     </div>
-                    <span className="text-xl font-bold">
+                    <span className="text-lg font-bold">
                       Level {currentLevel}: {currentLevel >= 5 ? 'Sales Master' : currentLevel >= 3 ? 'Rising Star' : 'Rookie'}
                     </span>
                   </div>
                 </div>
-                <div className="hidden md:block">
+                <div className="hidden md:flex items-center justify-center p-4">
                   <Image
-                    src="/placeholder.svg?height=200&width=200"
-                    width={200}
-                    height={200}
+                    src="/placeholder.svg?height=150&width=150"
+                    width={150}
+                    height={150}
                     alt="Welcome"
-                    className="h-full object-cover"
+                    className="object-cover rounded-lg"
                   />
                 </div>
               </div>
             </div>
 
             {/* daily goals */}
-            <div className="bg-gray-900 rounded-lg p-6 flex flex-col shadow-lg col-span-1 ">
-              <h2 className="text-xl font-bold mb-2">Daily Goal</h2>
+            <div className="bg-gray-900 rounded-lg p-6 flex flex-col shadow-lg w-full lg:w-80">
+              <h2 className="text-xl font-bold mb-4">Daily Goal</h2>
               <div className="flex-1 flex flex-col items-center justify-center">
                 <ProgressRing
                   progress={callsProgress}
@@ -154,35 +154,41 @@ export default function HomePage() {
                   text={`${userStats?.callsMade || 0}/20`}
                   textClassName="text-xl font-bold"
                 />
-                <p className="text-success text-sm mt-2">calls completed</p>
+                <p className="text-lime text-sm mt-3 font-medium">calls completed</p>
               </div>
             </div>
           </div>
 
           {/* deals */}
           <div className="bg-gray-900 rounded-lg p-6 shadow-lg">
-            <h2 className="text-gray-500 uppercase font-bold mb-2">DEALS</h2>
+            <h2 className="text-gray-400 uppercase tracking-wide font-bold mb-4 text-sm">PERFORMANCE OVERVIEW</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <div className="text-4xl font-bold">{userStats?.callsMade || 0}</div>
-                <div className="text-sm text-gray-400">Total Calls</div>
-                <div className="text-lime font-bold">This Week</div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-400 mb-1">{userStats?.callsMade || 0}</div>
+                <div className="text-sm text-gray-400 mb-1">Total Calls</div>
+                <div className="text-lime font-semibold text-xs">All Time</div>
               </div>
-              <div>
-                <div className="text-4xl font-bold">{userStats?.dealsClosed || 0}</div>
-                <div className="text-sm text-gray-400">Deals Closed</div>
-                <div className="h-2 mt-2 bg-green-700 rounded-full"></div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-400 mb-1">{userStats?.dealsClosed || 0}</div>
+                <div className="text-sm text-gray-400 mb-1">Deals Closed</div>
+                <div className="h-1 mt-2 bg-green-600 rounded-full mx-auto w-16"></div>
               </div>
-              <div>
-                <div className="text-4xl font-bold">{userStats?.upsells || 0}</div>
-                <div className="text-sm text-gray-400">Upsells</div>
-                <div className="h-2 mt-2 bg-blue-700 rounded-full"></div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-400 mb-1">{userStats?.upsells || 0}</div>
+                <div className="text-sm text-gray-400 mb-1">Upsells</div>
+                <div className="h-1 mt-2 bg-purple-600 rounded-full mx-auto w-16"></div>
               </div>
             </div>
-            <Progress
-              value={dealsProgress}
-              className="h-2 mt-4 bg-lime/25"
-            />
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-gray-400">Goal Progress</span>
+                <span className="text-sm text-lime font-semibold">{Math.round(dealsProgress)}%</span>
+              </div>
+              <Progress
+                value={dealsProgress}
+                className="h-2 bg-gray-800"
+              />
+            </div>
           </div>
 
           {/* buttons */}
@@ -202,28 +208,32 @@ export default function HomePage() {
           </div>
 
           {/* call logging */}
-          <div className="w-full lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6 shadow-lg">
-              <h2 className="text-2xl font-bold mb-4">Call logging</h2>
+          <div className="w-full">
+            <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+              <h2 className="text-2xl font-bold mb-4">Call Logging</h2>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-gray-400">
-                      <th className="pb-2">Name</th>
-                      <th className="pb-2">Phone</th>
-                      <th className="pb-2">Notes</th>
-                      <th className="pb-2">Status</th>
+                    <tr className="text-left text-gray-400 border-b border-gray-700">
+                      <th className="pb-3 font-medium">Name</th>
+                      <th className="pb-3 font-medium">Phone</th>
+                      <th className="pb-3 font-medium">Notes</th>
+                      <th className="pb-3 font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {/* FIXME: Replace with dynamic API call once Twilio integration is complete */}
                     {/* This will be populated with customer data from CRM/Twilio APIs */}
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-400">
-                        <div className="flex flex-col items-center gap-2">
-                          <Phone className="w-8 h-8 text-gray-500" />
-                          <p>Call Logs from Twilio Here:</p>
-                          <p className="text-sm">Features: Auto-dialing, call logging, customer notes</p>
+                      <td colSpan={4} className="py-12 text-center text-gray-400">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="p-4 bg-gray-700 rounded-full">
+                            <Phone className="w-8 h-8 text-gray-400" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg mb-1">Call Logs from Twilio</p>
+                            <p className="text-sm text-gray-500">Features: Auto-dialing, call logging, customer notes</p>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -246,51 +256,38 @@ export default function HomePage() {
         )}
 
         {/* right div */}
-        <div className="flex flex-col space-y-6 w-1/2">
+        <div className="flex flex-col space-y-6 w-full lg:w-1/2">
           {/* insights box */}
-          <div className="bg-gray-900 flex flex-row rounded-lg p-6 shadow-lg h-56 mt-[-24px]">
-            <div className="w-full">
-              <div className="flex items-center gap-2 mb-2">
-                <h2 className="text-xl font-bold">Insights Box</h2>
-                <TrendingUp className="w-6 h-6 text-yellow-400" />
-              </div>
-              <div className="border-l-4 border-yellow-400 pl-2 mb-4">
-                <h3 className="text-lg font-bold">Motivational Insights</h3>
-                {/* RECOMMENDATIONS for Dynamic Insights:
-                    1. Performance trends: "Your call-to-deal ratio improved 15% this week"
-                    2. Comparative insights: "You're 3 calls ahead of last week's pace"
-                    3. Goal tracking: "On track to hit monthly target by [date]"
-                    4. Skill insights: "Your average call duration is optimal at 8.5 minutes"
-                    5. Market insights: "Best calling times: 10-11 AM (32% higher success rate)"
-                    6. AI-powered recommendations based on call analysis
-                    7. Seasonal/trend analysis from historical data
-                */}
-                <div className="relative h-12 w-11/12">
-                  {motivationalQuotes.map((quote, index) => (
-                    <p
-                      key={index}
-                      className={`text-sm absolute ${
-                        currentQuote === index
-                          ? "quote-transition"
-                          : "opacity-0"
-                      }`}
-                      style={{ animationDelay: `${index * 4}s` }}
-                    >
-                      "{quote}"
-                    </p>
-                  ))}
-                </div>
-              </div>
+          <div className="bg-gray-900 rounded-lg p-6 shadow-lg">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-xl font-bold">Insights Box</h2>
+              <TrendingUp className="w-6 h-6 text-yellow-400" />
             </div>
-
-            <div className="mt-auto">
-              <Image
-                src="/placeholder.svg?height=100&width=150"
-                width={150}
-                height={100}
-                alt="Motivational"
-                className="ml-auto"
-              />
+            <div className="border-l-4 border-yellow-400 pl-4">
+              <h3 className="text-lg font-bold mb-3">Motivational Insights</h3>
+              {/* RECOMMENDATIONS for Dynamic Insights:
+                  1. Performance trends: "Your call-to-deal ratio improved 15% this week"
+                  2. Comparative insights: "You're 3 calls ahead of last week's pace"
+                  3. Goal tracking: "On track to hit monthly target by [date]"
+                  4. Skill insights: "Your average call duration is optimal at 8.5 minutes"
+                  5. Market insights: "Best calling times: 10-11 AM (32% higher success rate)"
+                  6. AI-powered recommendations based on call analysis
+                  7. Seasonal/trend analysis from historical data
+              */}
+              <div className="relative h-16 bg-gray-800 rounded-lg p-3 flex items-center">
+                {motivationalQuotes.map((quote, index) => (
+                  <p
+                    key={index}
+                    className={`text-sm absolute inset-3 flex items-center transition-all duration-500 ${
+                      currentQuote === index
+                        ? "opacity-100 transform translate-y-0"
+                        : "opacity-0 transform translate-y-2"
+                    }`}
+                  >
+                    "{quote}"
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
 
