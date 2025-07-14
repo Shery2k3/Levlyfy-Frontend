@@ -77,7 +77,7 @@ export default function PerformanceChart({ data = [], isLoading = false }: Perfo
     const maxCalls = Math.max(...callsData)
     const maxDeals = Math.max(...dealsData)
     const maxUpsells = Math.max(...upsellsData)
-    const maxValue = Math.max(maxCalls, maxDeals, maxUpsells, 10) // Minimum 10 for better scaling
+    const maxValue = Math.max(maxCalls, maxDeals, maxUpsells, 5) // Minimum 5 for better scaling of small values
 
     // Chart config
     const padding = 40
@@ -158,15 +158,14 @@ export default function PerformanceChart({ data = [], isLoading = false }: Perfo
       ctx.fillText(periods[i], x, canvas.offsetHeight - 10)
     }
 
-    // Draw the lines
-    if (upsellsData.some(v => v > 0)) {
-      drawLine(upsellsData, "#A855F7", true) // Purple for upsells
-    }
+    // Draw the lines - always draw calls line, others only if they have data
+    drawLine(callsData, "#3B82F6", true) // Blue for calls made - always show
+    
     if (dealsData.some(v => v > 0)) {
       drawLine(dealsData, "#10B981", true) // Green for deals closed
     }
-    if (callsData.some(v => v > 0)) {
-      drawLine(callsData, "#3B82F6", true) // Blue for calls made
+    if (upsellsData.some(v => v > 0)) {
+      drawLine(upsellsData, "#A855F7", true) // Purple for upsells
     }
 
   }, [windowWidth, data, isLoading])

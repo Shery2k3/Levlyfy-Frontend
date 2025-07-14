@@ -40,15 +40,30 @@ export default function HomePage() {
     const totalDeals = currentStats.dealsClosed || 0;
     const totalUpsells = currentStats.upsells || 0;
     
+    // If user has very low stats, create a more visible progression
+    const minCallsPerWeek = totalCalls > 0 ? Math.max(1, Math.floor(totalCalls / weeks)) : 1;
+    const minDealsPerWeek = totalDeals > 0 ? Math.max(0, Math.floor(totalDeals / weeks)) : 0;
+    const minUpsellsPerWeek = totalUpsells > 0 ? Math.max(0, Math.floor(totalUpsells / weeks)) : 0;
+    
     for (let i = 0; i < weeks; i++) {
       // Create progressive improvement over time
       const weekProgress = (i + 1) / weeks;
-      const variation = 0.8 + Math.random() * 0.4; // 20% variation
+      const variation = 0.7 + Math.random() * 0.6; // 30% variation
       
-      // Ensure realistic relationships (deals <= calls, upsells <= deals)
-      const weekCalls = Math.floor(totalCalls * weekProgress * variation / 4);
-      const weekDeals = Math.min(weekCalls, Math.floor(totalDeals * weekProgress * variation / 4));
-      const weekUpsells = Math.min(weekDeals, Math.floor(totalUpsells * weekProgress * variation / 4));
+      // For small numbers, ensure we show a clear progression
+      let weekCalls, weekDeals, weekUpsells;
+      
+      if (totalCalls <= 5) {
+        // For very small call counts, show clear week-by-week progression
+        weekCalls = Math.max(0, Math.floor(weekProgress * totalCalls * variation));
+        weekDeals = Math.min(weekCalls, Math.floor(weekProgress * totalDeals * variation));
+        weekUpsells = Math.min(weekDeals, Math.floor(weekProgress * totalUpsells * variation));
+      } else {
+        // For larger numbers, use the original logic
+        weekCalls = Math.floor(totalCalls * weekProgress * variation / 4);
+        weekDeals = Math.min(weekCalls, Math.floor(totalDeals * weekProgress * variation / 4));
+        weekUpsells = Math.min(weekDeals, Math.floor(totalUpsells * weekProgress * variation / 4));
+      }
       
       history.push({
         callsMade: Math.max(0, weekCalls),
@@ -70,6 +85,13 @@ export default function HomePage() {
           period: `Week ${i + 1}`
         };
       }
+    }
+    
+    // Ensure the last few weeks show current stats for realism
+    if (history.length > 0 && totalCalls > 0) {
+      history[history.length - 1].callsMade = totalCalls;
+      history[history.length - 1].dealsClosed = totalDeals;
+      history[history.length - 1].upsells = totalUpsells;
     }
     
     return history;
@@ -123,6 +145,8 @@ export default function HomePage() {
       setUserStats(response.data.data);
       // Generate performance history based on current stats
       const history = generatePerformanceHistory(response.data.data);
+      console.log('Generated performance history:', history);
+      console.log('Current stats:', response.data.data);
       setPerformanceHistory(history);
     } catch (error) {
       console.error('Failed to fetch user stats:', error);
