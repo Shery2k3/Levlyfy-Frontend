@@ -153,12 +153,28 @@
   @apply bg-gold/20 text-gold;
 }
 
+.badge-silver {
+  @apply bg-gray-400/20 text-gray-400;
+}
+
+.badge-bronze {
+  @apply bg-amber-700/20 text-amber-700;
+}
+
 .dot-challenger {
   @apply bg-challenger;
 }
 
 .dot-gold {
   @apply bg-gold;
+}
+
+.dot-silver {
+  @apply bg-gray-400;
+}
+
+.dot-bronze {
+  @apply bg-amber-700;
 }
 
 @keyframes fadeIn {

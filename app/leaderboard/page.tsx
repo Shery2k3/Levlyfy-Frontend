@@ -15,7 +15,7 @@ interface LeaderboardEntry {
   dealsClosed: number;
   upsells: number;
   totalScore: number;
-  rank: "challenger" | "gold";
+  rank: "challenger" | "gold" | "silver" | "bronze";
 }
 
 interface UserStats {
@@ -23,7 +23,7 @@ interface UserStats {
   dealsClosed: number;
   upsells: number;
   totalScore: number;
-  rank: "challenger" | "gold";
+  rank: "challenger" | "gold" | "silver" | "bronze";
 }
 
 export default function LeaderboardPage() {
@@ -255,12 +255,43 @@ function PerformerCard({
   feedback,
 }: {
   name: string;
-  badge: "challenger" | "gold";
+  badge: "challenger" | "gold" | "silver" | "bronze";
   trophy: "gold" | "silver";
   calls: string;
   deals: string;
   feedback: string;
 }) {
+  // Helper function to get badge styling
+  const getBadgeStyle = (rank: string) => {
+    switch(rank) {
+      case "challenger": return "badge-challenger";
+      case "gold": return "badge-gold";
+      case "silver": return "badge-silver";
+      case "bronze": return "badge-bronze";
+      default: return "badge-bronze";
+    }
+  };
+
+  const getDotStyle = (rank: string) => {
+    switch(rank) {
+      case "challenger": return "dot-challenger";
+      case "gold": return "dot-gold";
+      case "silver": return "dot-silver";
+      case "bronze": return "dot-bronze";
+      default: return "dot-bronze";
+    }
+  };
+
+  const getRankLabel = (rank: string) => {
+    switch(rank) {
+      case "challenger": return "Challenger";
+      case "gold": return "Gold";
+      case "silver": return "Silver";
+      case "bronze": return "Bronze";
+      default: return "Bronze";
+    }
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-lg hover:shadow-blue-900/20 transition-all duration-300 hover:-translate-y-1">
       <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap">
@@ -272,16 +303,12 @@ function PerformerCard({
           <div className="font-bold text-base sm:text-lg truncate">{name}</div>
           <div className="flex items-center gap-2 flex-wrap">
             <div
-              className={`flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm ${
-                badge === "challenger" ? "badge-challenger" : "badge-gold"
-              }`}
+              className={`flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm ${getBadgeStyle(badge)}`}
             >
               <div
-                className={`mr-1 w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
-                  badge === "challenger" ? "dot-challenger" : "dot-gold"
-                }`}
+                className={`mr-1 w-2 h-2 sm:w-3 sm:h-3 rounded-full ${getDotStyle(badge)}`}
               ></div>
-              <span className="truncate">{badge === "challenger" ? "Challenger" : "Gold"}</span>
+              <span className="truncate">{getRankLabel(badge)}</span>
             </div>
           </div>
         </div>
@@ -344,8 +371,39 @@ function LeaderboardRow({
   calls: string;
   deals: string;
   score: string;
-  rank: "challenger" | "gold";
+  rank: "challenger" | "gold" | "silver" | "bronze";
 }) {
+  // Helper function to get badge styling
+  const getBadgeStyle = (rank: string) => {
+    switch(rank) {
+      case "challenger": return "badge-challenger";
+      case "gold": return "badge-gold";
+      case "silver": return "badge-silver";
+      case "bronze": return "badge-bronze";
+      default: return "badge-bronze";
+    }
+  };
+
+  const getDotStyle = (rank: string) => {
+    switch(rank) {
+      case "challenger": return "dot-challenger";
+      case "gold": return "dot-gold";
+      case "silver": return "dot-silver";
+      case "bronze": return "dot-bronze";
+      default: return "dot-bronze";
+    }
+  };
+
+  const getRankLabel = (rank: string) => {
+    switch(rank) {
+      case "challenger": return "Challenger";
+      case "gold": return "Gold";
+      case "silver": return "Silver";
+      case "bronze": return "Bronze";
+      default: return "Bronze";
+    }
+  };
+
   return (
     <tr
       className={`${
@@ -385,15 +443,11 @@ function LeaderboardRow({
       <td className="py-4 px-4">{score}</td>
       <td className="py-4 px-4">
         <div
-          className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${
-            rank === "challenger" ? "badge-challenger" : "badge-gold"
-          }`}
+          className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${getBadgeStyle(rank)}`}
         >
-          {rank === "challenger" ? "Challenger" : "Gold"}
+          {getRankLabel(rank)}
           <div
-            className={`ml-1 w-3 h-3 rounded-full ${
-              rank === "challenger" ? "dot-challenger" : "dot-gold"
-            }`}
+            className={`ml-1 w-3 h-3 rounded-full ${getDotStyle(rank)}`}
           ></div>
         </div>
       </td>
