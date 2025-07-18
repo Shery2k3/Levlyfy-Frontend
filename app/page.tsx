@@ -31,48 +31,66 @@ export default function HomePage() {
   // Generate mock historical data based on current stats
   const generatePerformanceHistory = (currentStats: any) => {
     if (!currentStats) return [];
-    
+
     const weeks = 8; // Show 8 weeks of data
     const history = [];
-    
+
     // Calculate realistic progressions
     const totalCalls = currentStats.callsMade || 0;
     const totalDeals = currentStats.dealsClosed || 0;
     const totalUpsells = currentStats.upsells || 0;
-    
+
     // If user has very low stats, create a more visible progression
-    const minCallsPerWeek = totalCalls > 0 ? Math.max(1, Math.floor(totalCalls / weeks)) : 1;
-    const minDealsPerWeek = totalDeals > 0 ? Math.max(0, Math.floor(totalDeals / weeks)) : 0;
-    const minUpsellsPerWeek = totalUpsells > 0 ? Math.max(0, Math.floor(totalUpsells / weeks)) : 0;
-    
+    const minCallsPerWeek =
+      totalCalls > 0 ? Math.max(1, Math.floor(totalCalls / weeks)) : 1;
+    const minDealsPerWeek =
+      totalDeals > 0 ? Math.max(0, Math.floor(totalDeals / weeks)) : 0;
+    const minUpsellsPerWeek =
+      totalUpsells > 0 ? Math.max(0, Math.floor(totalUpsells / weeks)) : 0;
+
     for (let i = 0; i < weeks; i++) {
       // Create progressive improvement over time
       const weekProgress = (i + 1) / weeks;
       const variation = 0.7 + Math.random() * 0.6; // 30% variation
-      
+
       // For small numbers, ensure we show a clear progression
       let weekCalls, weekDeals, weekUpsells;
-      
+
       if (totalCalls <= 5) {
         // For very small call counts, show clear week-by-week progression
-        weekCalls = Math.max(0, Math.floor(weekProgress * totalCalls * variation));
-        weekDeals = Math.min(weekCalls, Math.floor(weekProgress * totalDeals * variation));
-        weekUpsells = Math.min(weekDeals, Math.floor(weekProgress * totalUpsells * variation));
+        weekCalls = Math.max(
+          0,
+          Math.floor(weekProgress * totalCalls * variation)
+        );
+        weekDeals = Math.min(
+          weekCalls,
+          Math.floor(weekProgress * totalDeals * variation)
+        );
+        weekUpsells = Math.min(
+          weekDeals,
+          Math.floor(weekProgress * totalUpsells * variation)
+        );
       } else {
         // For larger numbers, use the original logic
-        weekCalls = Math.floor(totalCalls * weekProgress * variation / 4);
-        weekDeals = Math.min(weekCalls, Math.floor(totalDeals * weekProgress * variation / 4));
-        weekUpsells = Math.min(weekDeals, Math.floor(totalUpsells * weekProgress * variation / 4));
+        weekCalls = Math.floor((totalCalls * weekProgress * variation) / 4);
+        weekDeals = Math.min(
+          weekCalls,
+          Math.floor((totalDeals * weekProgress * variation) / 4)
+        );
+        weekUpsells = Math.min(
+          weekDeals,
+          Math.floor((totalUpsells * weekProgress * variation) / 4)
+        );
       }
-      
+
       history.push({
         callsMade: Math.max(0, weekCalls),
         dealsClosed: Math.max(0, weekDeals),
         upsells: Math.max(0, weekUpsells),
-        period: `Week ${i + 1}`
+        period: `Week ${i + 1}`,
       });
     }
-    
+
     // Make sure we have some data to show even if user has no stats
     if (totalCalls === 0 && totalDeals === 0 && totalUpsells === 0) {
       // Generate sample progression for new users
@@ -82,57 +100,76 @@ export default function HomePage() {
           callsMade: progression,
           dealsClosed: Math.floor(progression / 3),
           upsells: Math.floor(progression / 5),
-          period: `Week ${i + 1}`
+          period: `Week ${i + 1}`,
         };
       }
     }
-    
+
     // Ensure the last few weeks show current stats for realism
     if (history.length > 0 && totalCalls > 0) {
       history[history.length - 1].callsMade = totalCalls;
       history[history.length - 1].dealsClosed = totalDeals;
       history[history.length - 1].upsells = totalUpsells;
     }
-    
+
     return history;
   };
 
   const generateMotivationalQuotes = (stats: any, level: number) => {
     if (!stats) return ["Keep up the great work!"];
-    
+
     const quotes = [];
     const callsToGoal = Math.max(0, 20 - stats.callsMade);
     const dealsToGoal = Math.max(0, 5 - stats.dealsClosed);
-    
+
     if (callsToGoal > 0) {
-      quotes.push(`You're only ${callsToGoal} calls away from reaching today's goal—keep going!`);
+      quotes.push(
+        `You're only ${callsToGoal} calls away from reaching today's goal—keep going!`
+      );
     } else {
-      quotes.push("Amazing! You've exceeded your daily call goal—great momentum!");
+      quotes.push(
+        "Amazing! You've exceeded your daily call goal—great momentum!"
+      );
     }
-    
+
     if (stats.dealsClosed > 0) {
-      quotes.push(`Excellent work! You've closed ${stats.dealsClosed} deals this week!`);
+      quotes.push(
+        `Excellent work! You've closed ${stats.dealsClosed} deals this week!`
+      );
     }
-    
+
     if (stats.totalScore > 0) {
-      quotes.push(`Your total score of ${stats.totalScore} shows real progress—keep building!`);
+      quotes.push(
+        `Your total score of ${stats.totalScore} shows real progress—keep building!`
+      );
     }
-    
+
     if (stats.upsells > 0) {
-      quotes.push(`Great upselling! You've achieved ${stats.upsells} upsells this week!`);
+      quotes.push(
+        `Great upselling! You've achieved ${stats.upsells} upsells this week!`
+      );
     }
-    
-    quotes.push(`You're currently level ${level}—each call brings you closer to the next level!`);
-    
+
+    quotes.push(
+      `You're currently level ${level}—each call brings you closer to the next level!`
+    );
+
     return quotes;
   };
 
   // Calculate progress percentages and level
-  const callsProgress = userStats ? Math.min((userStats.callsMade / 20) * 100, 100) : 0; // Goal: 20 calls
-  const dealsProgress = userStats ? Math.min((userStats.dealsClosed / 5) * 100, 100) : 0; // Goal: 5 deals
+  const callsProgress = userStats
+    ? Math.min((userStats.callsMade / 20) * 100, 100)
+    : 0; // Goal: 20 calls
+  const dealsProgress = userStats
+    ? Math.min((userStats.dealsClosed / 5) * 100, 100)
+    : 0; // Goal: 5 deals
   const currentLevel = userStats ? Math.floor(userStats.totalScore / 100) : 0; // 100 points per level
 
-  const motivationalQuotes = generateMotivationalQuotes(userStats, currentLevel);
+  const motivationalQuotes = generateMotivationalQuotes(
+    userStats,
+    currentLevel
+  );
 
   useEffect(() => {
     fetchUserStats();
@@ -141,15 +178,17 @@ export default function HomePage() {
 
   const fetchUserStats = async () => {
     try {
-      const response = await api.get('/performance/leaderboard/me?period=alltime');
+      const response = await api.get(
+        "/performance/leaderboard/me?period=alltime"
+      );
       setUserStats(response.data.data);
       // Generate performance history based on current stats
       const history = generatePerformanceHistory(response.data.data);
-      console.log('Generated performance history:', history);
-      console.log('Current stats:', response.data.data);
+      console.log("Generated performance history:", history);
+      console.log("Current stats:", response.data.data);
       setPerformanceHistory(history);
     } catch (error) {
-      console.error('Failed to fetch user stats:', error);
+      console.error("Failed to fetch user stats:", error);
     } finally {
       setLoading(false);
     }
@@ -157,10 +196,10 @@ export default function HomePage() {
 
   const fetchLeaderboardData = async () => {
     try {
-      const response = await api.get('/performance/leaderboard?period=alltime');
+      const response = await api.get("/performance/leaderboard?period=alltime");
       setLeaderboardData(response.data.data?.slice(0, 3) || []); // Top 3
     } catch (error) {
-      console.error('Failed to fetch leaderboard:', error);
+      console.error("Failed to fetch leaderboard:", error);
     }
   };
 
@@ -192,7 +231,7 @@ export default function HomePage() {
               <div className="flex flex-col md:flex-row">
                 <div className="p-6 md:p-8 flex flex-col justify-center flex-1">
                   <h1 className="text-2xl lg:text-3xl font-bold mb-2">
-                    Hello, {user?.name || 'User'}!
+                    Hello, {user?.name || "User"}!
                   </h1>
                   <p className="text-slate-300 mb-4">
                     Welcome Back to Level up CRM
@@ -202,7 +241,12 @@ export default function HomePage() {
                       <Star className="w-5 h-5 text-blue-400" />
                     </div>
                     <span className="text-lg font-bold">
-                      Level {currentLevel}: {currentLevel >= 5 ? 'Sales Master' : currentLevel >= 3 ? 'Rising Star' : 'Rookie'}
+                      Level {currentLevel}:{" "}
+                      {currentLevel >= 5
+                        ? "Sales Master"
+                        : currentLevel >= 3
+                        ? "Rising Star"
+                        : "Rookie"}
                     </span>
                   </div>
                 </div>
@@ -229,27 +273,37 @@ export default function HomePage() {
                   text={`${userStats?.callsMade || 0}/20`}
                   textClassName="text-xl font-bold"
                 />
-                <p className="text-lime text-sm mt-3 font-medium">calls completed</p>
+                <p className="text-lime text-sm mt-3 font-medium">
+                  calls completed
+                </p>
               </div>
             </div>
           </div>
 
           {/* deals */}
           <div className="bg-gray-900 rounded-lg p-6 shadow-lg">
-            <h2 className="text-gray-400 uppercase tracking-wide font-bold mb-4 text-sm">PERFORMANCE OVERVIEW</h2>
+            <h2 className="text-gray-400 uppercase tracking-wide font-bold mb-4 text-sm">
+              PERFORMANCE OVERVIEW
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-400 mb-1">{userStats?.callsMade || 0}</div>
+                <div className="text-3xl font-bold text-blue-400 mb-1">
+                  {userStats?.callsMade || 0}
+                </div>
                 <div className="text-sm text-gray-400 mb-1">Total Calls</div>
                 <div className="text-lime font-semibold text-xs">All Time</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-400 mb-1">{userStats?.dealsClosed || 0}</div>
+                <div className="text-3xl font-bold text-green-400 mb-1">
+                  {userStats?.dealsClosed || 0}
+                </div>
                 <div className="text-sm text-gray-400 mb-1">Deals Closed</div>
                 <div className="h-1 mt-2 bg-green-600 rounded-full mx-auto w-16"></div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-purple-400 mb-1">{userStats?.upsells || 0}</div>
+                <div className="text-3xl font-bold text-purple-400 mb-1">
+                  {userStats?.upsells || 0}
+                </div>
                 <div className="text-sm text-gray-400 mb-1">Upsells</div>
                 <div className="h-1 mt-2 bg-purple-600 rounded-full mx-auto w-16"></div>
               </div>
@@ -257,18 +311,20 @@ export default function HomePage() {
             <div className="mt-6">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-400">Goal Progress</span>
-                <span className="text-sm text-lime font-semibold">{Math.round(dealsProgress)}%</span>
+                <span className="text-sm text-lime font-semibold">
+                  {Math.round(dealsProgress)}%
+                </span>
               </div>
-              <Progress
-                value={dealsProgress}
-                className="h-2 bg-gray-800"
-              />
+              <Progress value={dealsProgress} className="h-2 bg-gray-800" />
             </div>
           </div>
 
           {/* buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" onClick={() => setIsCalling(true)}>
+            <Button
+              className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center"
+              onClick={() => setIsCalling(true)}
+            >
               <Phone className="mr-2 h-5 w-5" />
               Call Next Customer
             </Button>
@@ -300,14 +356,22 @@ export default function HomePage() {
                     {/* FIXME: Replace with dynamic API call once Twilio integration is complete */}
                     {/* This will be populated with customer data from CRM/Twilio APIs */}
                     <tr>
-                      <td colSpan={4} className="py-12 text-center text-gray-400">
+                      <td
+                        colSpan={4}
+                        className="py-12 text-center text-gray-400"
+                      >
                         <div className="flex flex-col items-center gap-3">
                           <div className="p-4 bg-gray-700 rounded-full">
                             <Phone className="w-8 h-8 text-gray-400" />
                           </div>
                           <div>
-                            <p className="font-semibold text-lg mb-1">Call Logs from Twilio</p>
-                            <p className="text-sm text-gray-500">Features: Auto-dialing, call logging, customer notes</p>
+                            <p className="font-semibold text-lg mb-1">
+                              Call Logs from Twilio
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Features: Auto-dialing, call logging, customer
+                              notes
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -322,11 +386,18 @@ export default function HomePage() {
         {/* Call Screen */}
 
         {isCalling && (
-          <div
-            className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center"
-            onClick={() => setIsCalling(false)}
-          >
-            <CallScreen />
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center">
+            <div
+              onClick={() => setIsCalling(false)}
+              className="absolute inset-0"
+            />
+
+            <div
+              className="relative z-10"
+              onClick={(e) => e.stopPropagation()} // prevent closing on inner click
+            >
+              <CallScreen />
+            </div>
           </div>
         )}
 
