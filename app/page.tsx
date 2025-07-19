@@ -36,14 +36,16 @@ export default function HomePage() {
   useEffect(() => {
     const setupTwilio = async () => {
       try {
+        // Request microphone permission first
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        
         const response = await api.get("/twillio/token");
         const { token } = response.data;
         
-        // The 'Device' class from 'twilio-client' is not a constructor.
-        // We need to use the static 'setup' method.
+        console.log("Setting up Twilio Device with token");
+        
         const device = new Device();
         device.setup(token, {
-          // The types for codecPreferences are specific, let's use the correct ones.
           codecPreferences: ["pcmu", "opus"] as any,
           fakeLocalDTMF: true,
           enableRingingState: true,
@@ -52,14 +54,55 @@ export default function HomePage() {
         device.on("ready", () => {
           console.log("Twilio Device Ready");
           setTwilioDevice(device);
+          toast({
+            title: "Device Ready",
+            description: "Twilio device is ready for calls",
+          });
         });
 
         device.on("error", (error) => {
           console.error("Twilio Device Error: ", error);
+          toast({
+            title: "Device Error",
+            description: `Twilio device error: ${error.message}`,
+            variant: "destructive",
+          });
+        });
+
+        device.on("connect", (conn) => {
+          console.log("Call connected!", conn);
+          toast({
+            title: "Connected",
+            description: "Call is now active. You can speak!",
+          });
+        });
+
+        device.on("disconnect", (conn) => {
+          console.log("Call disconnected", conn);
+          setIsCalling(false);
+          toast({
+            title: "Call Ended",
+            description: "The call has been disconnected.",
+          });
+        });
+
+        device.on("incoming", (conn) => {
+          console.log("Incoming call from Twilio!", conn);
+          toast({
+            title: "Incoming Call",
+            description: "Connecting your browser to the phone call...",
+          });
+          // Auto-accept the incoming connection from your backend
+          conn.accept();
         });
 
       } catch (error) {
         console.error("Error setting up Twilio:", error);
+        toast({
+          title: "Setup Error",
+          description: "Failed to set up Twilio. Check console for details.",
+          variant: "destructive",
+        });
       }
     };
 
