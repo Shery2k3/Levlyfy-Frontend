@@ -16,6 +16,7 @@ import {
 import TeamHighlights from "@/components/team-highlights";
 import LeaderboardHighlights from "@/components/leaderboard-highlights";
 import CallScreen from "@/components/call-screen";
+import ModernDialer from "@/components/modern-dialer";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
@@ -24,11 +25,15 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
   const [isCalling, setIsCalling] = useState(false);
+  const [isDialerOpen, setIsDialerOpen] = useState(false);
   const [currentQuote, setCurrentQuote] = useState(0);
   const [userStats, setUserStats] = useState<any>(null);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [callConnected, setCallConnected] = useState(false);
+  const [currentCallNumber, setCurrentCallNumber] = useState("");
+  const [currentCallName, setCurrentCallName] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
   const [twilioDevice, setTwilioDevice] = useState<Device | null>(null);
@@ -82,6 +87,7 @@ export default function HomePage() {
         device.on("connect", (conn) => {
           console.log("🔗 Call connected! Connection details:", conn);
           console.log("🔗 Connection parameters:", conn.parameters);
+          setCallConnected(true);
           toast({
             title: "Connected",
             description: "Call is now active. You can speak!",
@@ -92,6 +98,9 @@ export default function HomePage() {
           console.log("📞 Call disconnected. Connection:", conn);
           console.log("📞 Disconnect reason:", conn ? conn.error : 'Unknown');
           setIsCalling(false);
+          setCallConnected(false);
+          setCurrentCallNumber("");
+          setCurrentCallName("");
           toast({
             title: "Call Ended",
             description: "The call has been disconnected.",
@@ -151,7 +160,7 @@ export default function HomePage() {
     };
   }, [user]);
 
-  const handleCall = async () => {
+  const handleCall = async (numberToCall?: string, contactName?: string) => {
     console.log("🚀 HANDLE CALL CLICKED!");
     console.log("📱 Twilio Device Status:", twilioDevice?.status());
     console.log("📱 Device Ready?", twilioDevice ? "YES" : "NO");
@@ -166,20 +175,23 @@ export default function HomePage() {
       return;
     }
     
-    // For now, we'll use a placeholder number.
-    // You'll replace this with a dynamic number from your CRM later.
-    const numberToCall = "+923142113157"; // IMPORTANT: Replace with a verified number for trial accounts
-    console.log("📞 About to call:", numberToCall);
+    // Use the provided number or fallback to the hardcoded one
+    const phoneNumber = numberToCall || "+923142113157";
+    console.log("📞 About to call:", phoneNumber);
+
+    // Set call information
+    setCurrentCallNumber(phoneNumber);
+    setCurrentCallName(contactName || "Customer");
 
     try {
       console.log("📡 Making API call to start-call...");
-      const response = await api.post("/twillio/start-call", { to: numberToCall });
+      const response = await api.post("/twillio/start-call", { to: phoneNumber });
       console.log("✅ Start-call API response:", response.data);
       
       setIsCalling(true);
       toast({
         title: "Calling",
-        description: `Calling ${numberToCall}...`,
+        description: `Calling ${contactName || phoneNumber}...`,
       });
       
       console.log("📞 Call initiated! Now waiting for incoming connection...");
@@ -194,6 +206,20 @@ export default function HomePage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEndCall = () => {
+    if (twilioDevice) {
+      twilioDevice.disconnectAll();
+    }
+    setIsCalling(false);
+    setCallConnected(false);
+    setCurrentCallNumber("");
+    setCurrentCallName("");
+  };
+
+  const openDialer = () => {
+    setIsDialerOpen(true);
   };
 
   // Generate mock historical data based on current stats
@@ -436,7 +462,7 @@ export default function HomePage() {
 
           {/* buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" onClick={handleCall}>
+            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" onClick={openDialer}>
               <Phone className="mr-2 h-5 w-5" />
               Call Next Customer
             </Button>
@@ -487,15 +513,21 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Call Screen */}
+        {/* Modern Dialer */}
+        <ModernDialer
+          isOpen={isDialerOpen}
+          onClose={() => setIsDialerOpen(false)}
+          onCall={handleCall}
+        />
 
+        {/* Call Screen */}
         {isCalling && (
-          <div
-            className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center"
-            onClick={() => setIsCalling(false)}
-          >
-            <CallScreen />
-          </div>
+          <CallScreen
+            contactName={currentCallName}
+            contactPhone={currentCallNumber}
+            onEndCall={handleEndCall}
+            isConnected={callConnected}
+          />
         )}
 
         {/* right div */}
