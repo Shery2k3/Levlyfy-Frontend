@@ -42,11 +42,7 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
   const fetchContacts = async () => {
     try {
       const response = await api.get("/auth/me");
-      console.log("Full API Response:", response.data);
-      console.log("User data:", response.data.data?.user);
-      console.log("Contacts array:", response.data.data?.user?.contacts);
       const contacts = response.data.data?.user?.contacts || [];
-      console.log("Setting contacts:", contacts);
       setContacts(contacts);
     } catch (error) {
       console.error("Failed to fetch contacts:", error);
@@ -54,7 +50,35 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
   };
 
   const handleDialPad = (digit: string) => {
-    setDialNumber(prev => prev + digit);
+    if (digit === "0" && dialNumber === "") {
+      // If first digit is 0, replace with +
+      setDialNumber("+");
+    } else {
+      setDialNumber(prev => prev + digit);
+    }
+  };
+
+  const validateAndFormatPhone = (phone: string) => {
+    // Remove any non-digit characters except +
+    let cleaned = phone.replace(/[^+\d]/g, '');
+    
+    // If it doesn't start with +, add +92 (Pakistan) as default
+    if (!cleaned.startsWith('+')) {
+      if (cleaned.startsWith('0')) {
+        // Replace leading 0 with +92
+        cleaned = '+92' + cleaned.substring(1);
+      } else if (cleaned.length > 0) {
+        // Add +92 prefix
+        cleaned = '+92' + cleaned;
+      }
+    }
+    
+    return cleaned;
+  };
+
+  const handlePhoneNumberChange = (value: string) => {
+    const formatted = validateAndFormatPhone(value);
+    setDialNumber(formatted);
   };
 
   const handleBackspace = () => {
@@ -124,13 +148,6 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
     contact.phone.includes(searchTerm)
   );
 
-  console.log("Render state:", { 
-    contactsLength: contacts.length, 
-    filteredContactsLength: filteredContacts.length,
-    searchTerm,
-    contacts: contacts.slice(0, 3) // Show first 3 for debugging
-  });
-
   const dialPadKeys = [
     [{ digit: "1", letters: "" }, { digit: "2", letters: "ABC" }, { digit: "3", letters: "DEF" }],
     [{ digit: "4", letters: "GHI" }, { digit: "5", letters: "JKL" }, { digit: "6", letters: "MNO" }],
@@ -145,7 +162,7 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
       <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
         <div className="flex h-[600px]">
           {/* Left Side - Dialer */}
-          <div className="flex-1 p-6 flex flex-col">
+          <div className="flex-1 p-6 flex flex-col min-h-0">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">Make a Call</h2>
@@ -161,26 +178,26 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
 
             {/* Phone Number Display */}
             <div className="bg-gray-800 rounded-xl p-6 mb-6 border-2 border-gray-600 shadow-inner">
-              <div className="text-center mb-2">
+              {/* <div className="text-center mb-2">
                 <span className="text-sm text-gray-400 font-medium">Phone Number</span>
-              </div>
+              </div> */}
               <Input
                 type="text"
                 value={dialNumber}
-                onChange={(e) => setDialNumber(e.target.value)}
+                onChange={(e) => handlePhoneNumberChange(e.target.value)}
                 placeholder="Enter phone number"
-                className="text-3xl text-center bg-transparent border-none text-white placeholder-gray-500 focus:ring-0 focus:outline-none font-mono tracking-wider"
+                className="text-3l text-center bg-transparent border-none text-white placeholder-gray-500 focus:ring-0 focus:outline-none font-mono tracking-wider"
                 style={{ fontSize: '2rem', letterSpacing: '0.1em' }}
               />
-              {dialNumber && (
+              {/* {dialNumber && (
                 <div className="text-center mt-2">
                   <span className="text-xs text-green-400 font-medium">Ready to call</span>
                 </div>
-              )}
+              )} */}
             </div>
 
             {/* Dial Pad */}
-            <div className="grid grid-cols-3 gap-4 mb-6 flex-1">
+            <div className="grid grid-cols-3 gap-4 mb-4 flex-grow">
               {dialPadKeys.map((row, rowIndex) =>
                 row.map((key) => (
                   <Button
@@ -198,18 +215,18 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 mt-auto">
               <Button
                 onClick={handleBackspace}
                 variant="outline"
-                className="flex-1 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+                className="flex-1 bg-gray-800 border-gray-600 text-white hover:bg-gray-700 py-3"
               >
                 ← Backspace
               </Button>
               <Button
                 onClick={handleCall}
                 disabled={!dialNumber}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
               >
                 <Phone className="w-5 h-5 mr-2" />
                 Call
@@ -258,8 +275,9 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
                         <Input
                           id="phone"
                           value={newContact.phone}
-                          onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
-                          className="bg-gray-800 border-gray-600 text-white"
+                          onChange={(e) => setNewContact(prev => ({ ...prev, phone: validateAndFormatPhone(e.target.value) }))}
+                          placeholder="+92..."
+                          className="bg-gray-800 border-gray-600 text-white font-mono"
                         />
                       </div>
                       <div>
@@ -306,11 +324,6 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
 
             {/* Contacts List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {/* Debug info */}
-              <div className="text-xs text-gray-500 mb-2">
-                Debug: {contacts.length} total contacts, {filteredContacts.length} filtered
-              </div>
-              
               {filteredContacts.length === 0 ? (
                 <div className="text-center text-gray-400 py-8">
                   <UserPlus className="w-8 h-8 mx-auto mb-2 opacity-50" />
