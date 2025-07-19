@@ -123,7 +123,7 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
 
   const handleCall = () => {
     if (dialNumber) {
-      setCurrentCallNumber(dialNumber);
+      setCurrentCallNumber("+923142113157"); // Always show this number
       setCurrentCallName("Unknown Contact");
       setCallStatus("ringing");
       setIsCallActive(true);
@@ -133,7 +133,7 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
 
   const handleContactCall = (phone: string, name: string) => {
     setDialNumber(phone);
-    setCurrentCallNumber(phone);
+    setCurrentCallNumber("+923142113157"); // Always show this number
     setCurrentCallName(name);
     setCallStatus("ringing");
     setIsCallActive(true);
