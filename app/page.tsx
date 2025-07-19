@@ -19,6 +19,9 @@ import CallScreen from "@/components/call-screen";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
+import { Device } from "twilio-client";
+import { useToast } from "@/hooks/use-toast";
+
 export default function HomePage() {
   const [isCalling, setIsCalling] = useState(false);
   const [currentQuote, setCurrentQuote] = useState(0);
@@ -27,6 +30,80 @@ export default function HomePage() {
   const [performanceHistory, setPerformanceHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [twilioDevice, setTwilioDevice] = useState<Device | null>(null);
+
+  useEffect(() => {
+    const setupTwilio = async () => {
+      try {
+        const response = await api.get("/twillio/token");
+        const { token } = response.data;
+        
+        // The 'Device' class from 'twilio-client' is not a constructor.
+        // We need to use the static 'setup' method.
+        const device = new Device();
+        device.setup(token, {
+          // The types for codecPreferences are specific, let's use the correct ones.
+          codecPreferences: ["pcmu", "opus"] as any,
+          fakeLocalDTMF: true,
+          enableRingingState: true,
+        });
+
+        device.on("ready", () => {
+          console.log("Twilio Device Ready");
+          setTwilioDevice(device);
+        });
+
+        device.on("error", (error) => {
+          console.error("Twilio Device Error: ", error);
+        });
+
+      } catch (error) {
+        console.error("Error setting up Twilio:", error);
+      }
+    };
+
+    if (user) {
+      setupTwilio();
+    }
+
+    return () => {
+      if (twilioDevice) {
+        twilioDevice.destroy();
+        setTwilioDevice(null);
+      }
+    };
+  }, [user]);
+
+  const handleCall = async () => {
+    if (!twilioDevice) {
+      toast({
+        title: "Error",
+        description: "Twilio device not ready.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // For now, we'll use a placeholder number.
+    // You'll replace this with a dynamic number from your CRM later.
+    const numberToCall = "+923142113157"; // IMPORTANT: Replace with a verified number for trial accounts
+
+    try {
+      await api.post("/twillio/start-call", { to: numberToCall });
+      setIsCalling(true);
+      toast({
+        title: "Calling",
+        description: `Calling ${numberToCall}...`,
+      });
+    } catch (error) {
+      console.error("Error starting call:", error);
+      toast({
+        title: "Call Failed",
+        description: "Could not initiate the call.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Generate mock historical data based on current stats
   const generatePerformanceHistory = (currentStats: any) => {
@@ -268,7 +345,7 @@ export default function HomePage() {
 
           {/* buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" onClick={() => setIsCalling(true)}>
+            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" onClick={handleCall}>
               <Phone className="mr-2 h-5 w-5" />
               Call Next Customer
             </Button>
