@@ -19,8 +19,6 @@ import CallScreen from "@/components/call-screen";
 import ModernDialer from "@/components/modern-dialer";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
-
-import { Device } from "twilio-client";
 import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
@@ -36,10 +34,15 @@ export default function HomePage() {
   const [currentCallName, setCurrentCallName] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
-  const [twilioDevice, setTwilioDevice] = useState<Device | null>(null);
+  const [twilioDevice, setTwilioDevice] = useState<any>(null);
 
   useEffect(() => {
     const setupTwilio = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       try {
         console.log("🎫 Requesting microphone permission...");
         // Request microphone permission first
@@ -53,6 +56,8 @@ export default function HomePage() {
         
         console.log("📱 Setting up Twilio Device with token");
         
+        // Dynamically import Twilio Device to avoid SSR issues
+        const { Device } = await import("twilio-client");
         const device = new Device();
         console.log("📱 Device instance created, setting up...");
         
@@ -152,13 +157,13 @@ export default function HomePage() {
     }
 
     return () => {
-      if (twilioDevice) {
+      if (twilioDevice && typeof window !== 'undefined') {
         console.log("🧹 Cleaning up Twilio device");
         twilioDevice.destroy();
         setTwilioDevice(null);
       }
     };
-  }, [user]);
+  }, [user, toast]);
 
   const handleCall = async (numberToCall?: string, contactName?: string) => {
     console.log("🚀 HANDLE CALL CLICKED!");
