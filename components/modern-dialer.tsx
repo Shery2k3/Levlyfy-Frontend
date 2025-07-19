@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Phone, UserPlus, Edit3, Trash2, Search } from "lucide-react";
+import { X, Phone, UserPlus, Edit3, Trash2, Search, PhoneOff, Mic, MicOff, Volume2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -31,6 +31,12 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [newContact, setNewContact] = useState({ name: "", phone: "", notes: "" });
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [currentCallNumber, setCurrentCallNumber] = useState("");
+  const [currentCallName, setCurrentCallName] = useState("");
+  const [callDuration, setCallDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [callStatus, setCallStatus] = useState<"ringing" | "connected" | "disconnected">("ringing");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,6 +44,36 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
       fetchContacts();
     }
   }, [isOpen]);
+
+  // Call duration timer and auto-disconnect logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isCallActive) {
+      if (callStatus === "ringing") {
+        // Auto-disconnect after 15 seconds of ringing
+        const timeout = setTimeout(() => {
+          setCallStatus("disconnected");
+          setTimeout(() => {
+            handleEndCall();
+          }, 2000); // Show disconnected state for 2 seconds before closing
+        }, 15000);
+
+        return () => {
+          clearTimeout(timeout);
+        };
+      } else if (callStatus === "connected") {
+        // Start call duration timer when connected
+        interval = setInterval(() => {
+          setCallDuration((prev) => prev + 1);
+        }, 1000);
+      }
+    } else {
+      setCallDuration(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCallActive, callStatus]);
 
   const fetchContacts = async () => {
     try {
@@ -87,15 +123,37 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
 
   const handleCall = () => {
     if (dialNumber) {
+      setCurrentCallNumber(dialNumber);
+      setCurrentCallName("Unknown Contact");
+      setCallStatus("ringing");
+      setIsCallActive(true);
       onCall(dialNumber);
-      onClose();
     }
   };
 
   const handleContactCall = (phone: string, name: string) => {
     setDialNumber(phone);
+    setCurrentCallNumber(phone);
+    setCurrentCallName(name);
+    setCallStatus("ringing");
+    setIsCallActive(true);
     onCall(phone, name);
+  };
+
+  const handleEndCall = () => {
+    setIsCallActive(false);
+    setCurrentCallNumber("");
+    setCurrentCallName("");
+    setCallDuration(0);
+    setIsMuted(false);
+    setCallStatus("ringing");
     onClose();
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const saveContact = async () => {
@@ -156,6 +214,116 @@ export default function ModernDialer({ isOpen, onClose, onCall }: ModernDialerPr
   ];
 
   if (!isOpen) return null;
+
+  // Show call modal when call is active
+  if (isCallActive) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-gray-700 overflow-hidden">
+          {/* Call Header */}
+          <div className={`p-8 text-center ${
+            callStatus === "ringing" ? "bg-gradient-to-r from-blue-600 to-purple-600" :
+            callStatus === "connected" ? "bg-gradient-to-r from-green-600 to-blue-600" :
+            "bg-gradient-to-r from-red-600 to-gray-600"
+          }`}>
+            {/* Profile Image Placeholder */}
+            <div className="w-24 h-24 bg-white/20 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center">
+                <span className="text-3xl font-bold text-white">
+                  {currentCallName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            </div>
+            
+            <h2 className="text-2xl font-semibold text-white mb-2">{currentCallName}</h2>
+            <p className={`text-lg mb-4 ${
+              callStatus === "ringing" ? "text-blue-100" :
+              callStatus === "connected" ? "text-green-100" :
+              "text-red-100"
+            }`}>{currentCallNumber}</p>
+            
+            {/* Call Status */}
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className={`w-3 h-3 rounded-full ${
+                callStatus === "ringing" ? "bg-blue-400 animate-pulse" :
+                callStatus === "connected" ? "bg-green-400 animate-pulse" :
+                "bg-red-400"
+              }`}></div>
+              <span className="text-white text-lg font-medium">
+                {callStatus === "ringing" ? "Awaiting..." :
+                 callStatus === "connected" ? "Connected" :
+                 "Call Ended"}
+              </span>
+            </div>
+            
+            {/* Call Duration - only show when connected */}
+            {callStatus === "connected" && (
+              <div className="flex items-center justify-center gap-2 text-green-100">
+                <Clock className="w-5 h-5" />
+                <span className="text-lg font-mono">{formatDuration(callDuration)}</span>
+              </div>
+            )}
+
+            {/* Ringing indicator */}
+            {callStatus === "ringing" && (
+              <div className="flex items-center justify-center gap-2 text-blue-100">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <span className="text-sm">Ringing...</span>
+              </div>
+            )}
+
+            {/* Disconnected message */}
+            {callStatus === "disconnected" && (
+              <div className="text-red-100 text-sm">
+                No answer - Call ended
+              </div>
+            )}
+          </div>
+
+          {/* Call Controls */}
+          <div className="p-8">
+            <div className="flex justify-center gap-6">
+              {/* Mute Button - only show when connected */}
+              {callStatus === "connected" && (
+                <Button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className={`w-16 h-16 rounded-full ${
+                    isMuted ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'
+                  } transition-all duration-200`}
+                >
+                  {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </Button>
+              )}
+              
+              {/* Speaker Button - only show when connected */}
+              {callStatus === "connected" && (
+                <Button
+                  onClick={() => {}} // Placeholder for speaker functionality
+                  className="w-16 h-16 rounded-full bg-gray-700 hover:bg-gray-600 transition-all duration-200"
+                >
+                  <Volume2 className="w-6 h-6" />
+                </Button>
+              )}
+              
+              {/* End Call Button - always show unless disconnected */}
+              {callStatus !== "disconnected" && (
+                <Button
+                  onClick={handleEndCall}
+                  className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 transition-all duration-200"
+                >
+                  <PhoneOff className="w-6 h-6" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
