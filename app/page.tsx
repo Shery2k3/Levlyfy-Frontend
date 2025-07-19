@@ -36,15 +36,21 @@ export default function HomePage() {
   useEffect(() => {
     const setupTwilio = async () => {
       try {
+        console.log("🎫 Requesting microphone permission...");
         // Request microphone permission first
         await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("✅ Microphone permission granted!");
         
+        console.log("🎫 Fetching Twilio token...");
         const response = await api.get("/twillio/token");
         const { token } = response.data;
+        console.log("✅ Token received! Length:", token.length);
         
-        console.log("Setting up Twilio Device with token");
+        console.log("📱 Setting up Twilio Device with token");
         
         const device = new Device();
+        console.log("📱 Device instance created, setting up...");
+        
         device.setup(token, {
           codecPreferences: ["pcmu", "opus"] as any,
           fakeLocalDTMF: true,
@@ -52,7 +58,7 @@ export default function HomePage() {
         });
 
         device.on("ready", () => {
-          console.log("Twilio Device Ready");
+          console.log("✅ Twilio Device Ready! Status:", device.status());
           setTwilioDevice(device);
           toast({
             title: "Device Ready",
@@ -61,7 +67,11 @@ export default function HomePage() {
         });
 
         device.on("error", (error) => {
-          console.error("Twilio Device Error: ", error);
+          console.error("❌ Twilio Device Error:", error);
+          console.error("❌ Error Details:", {
+            message: error.message,
+            code: error.code,
+          });
           toast({
             title: "Device Error",
             description: `Twilio device error: ${error.message}`,
@@ -70,7 +80,8 @@ export default function HomePage() {
         });
 
         device.on("connect", (conn) => {
-          console.log("Call connected!", conn);
+          console.log("🔗 Call connected! Connection details:", conn);
+          console.log("🔗 Connection parameters:", conn.parameters);
           toast({
             title: "Connected",
             description: "Call is now active. You can speak!",
@@ -78,7 +89,8 @@ export default function HomePage() {
         });
 
         device.on("disconnect", (conn) => {
-          console.log("Call disconnected", conn);
+          console.log("📞 Call disconnected. Connection:", conn);
+          console.log("📞 Disconnect reason:", conn ? conn.error : 'Unknown');
           setIsCalling(false);
           toast({
             title: "Call Ended",
@@ -87,17 +99,34 @@ export default function HomePage() {
         });
 
         device.on("incoming", (conn) => {
-          console.log("Incoming call from Twilio!", conn);
+          console.log("📞 🔥 INCOMING CALL FROM TWILIO! This is what we want!");
+          console.log("📞 Connection object:", conn);
+          console.log("📞 Connection parameters:", conn.parameters);
+          console.log("📞 From:", conn.parameters?.From);
+          console.log("📞 To:", conn.parameters?.To);
+          
           toast({
             title: "Incoming Call",
             description: "Connecting your browser to the phone call...",
           });
+          
+          console.log("📞 Accepting incoming connection...");
           // Auto-accept the incoming connection from your backend
           conn.accept();
+          console.log("✅ Connection accepted! You should be able to speak now!");
+        });
+
+        device.on("cancel", () => {
+          console.log("📞 Call was cancelled");
+        });
+
+        device.on("presence", (presenceEvent) => {
+          console.log("👥 Presence event:", presenceEvent);
         });
 
       } catch (error) {
-        console.error("Error setting up Twilio:", error);
+        console.error("❌ Error setting up Twilio:", error);
+        console.error("❌ Full error object:", error);
         toast({
           title: "Setup Error",
           description: "Failed to set up Twilio. Check console for details.",
@@ -107,11 +136,15 @@ export default function HomePage() {
     };
 
     if (user) {
+      console.log("👤 User authenticated, setting up Twilio...");
       setupTwilio();
+    } else {
+      console.log("❌ No user authenticated yet");
     }
 
     return () => {
       if (twilioDevice) {
+        console.log("🧹 Cleaning up Twilio device");
         twilioDevice.destroy();
         setTwilioDevice(null);
       }
@@ -119,7 +152,12 @@ export default function HomePage() {
   }, [user]);
 
   const handleCall = async () => {
+    console.log("🚀 HANDLE CALL CLICKED!");
+    console.log("📱 Twilio Device Status:", twilioDevice?.status());
+    console.log("📱 Device Ready?", twilioDevice ? "YES" : "NO");
+    
     if (!twilioDevice) {
+      console.error("❌ Twilio device not ready!");
       toast({
         title: "Error",
         description: "Twilio device not ready.",
@@ -127,19 +165,29 @@ export default function HomePage() {
       });
       return;
     }
+    
     // For now, we'll use a placeholder number.
     // You'll replace this with a dynamic number from your CRM later.
     const numberToCall = "+923142113157"; // IMPORTANT: Replace with a verified number for trial accounts
+    console.log("📞 About to call:", numberToCall);
 
     try {
-      await api.post("/twillio/start-call", { to: numberToCall });
+      console.log("📡 Making API call to start-call...");
+      const response = await api.post("/twillio/start-call", { to: numberToCall });
+      console.log("✅ Start-call API response:", response.data);
+      
       setIsCalling(true);
       toast({
         title: "Calling",
         description: `Calling ${numberToCall}...`,
       });
-    } catch (error) {
-      console.error("Error starting call:", error);
+      
+      console.log("📞 Call initiated! Now waiting for incoming connection...");
+      console.log("📞 Expected flow: Phone rings → You answer → Press key → Browser receives 'incoming' event");
+      
+    } catch (error: any) {
+      console.error("❌ Error starting call:", error);
+      console.error("❌ Error response:", error.response?.data);
       toast({
         title: "Call Failed",
         description: "Could not initiate the call.",
