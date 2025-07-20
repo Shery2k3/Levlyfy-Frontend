@@ -16,11 +16,13 @@ import {
 import TeamHighlights from "@/components/team-highlights";
 import LeaderboardHighlights from "@/components/leaderboard-highlights";
 import CallScreen from "@/components/call-screen";
+import Dialer from "@/components/dialer";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
 export default function HomePage() {
   const [isCalling, setIsCalling] = useState(false);
+  const [showDialer, setShowDialer] = useState(false);
   const [currentQuote, setCurrentQuote] = useState(0);
   const [userStats, setUserStats] = useState<any>(null);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
@@ -268,9 +270,12 @@ export default function HomePage() {
 
           {/* buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" onClick={() => setIsCalling(true)}>
+            <Button 
+              className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" 
+              onClick={() => setShowDialer(!showDialer)}
+            >
               <Phone className="mr-2 h-5 w-5" />
-              Call Next Customer
+              {showDialer ? 'Hide Dialer' : 'Call New Customer'}
             </Button>
             <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
               <MessageSquareText className="mr-2 h-5 w-5" />
@@ -281,6 +286,22 @@ export default function HomePage() {
               History
             </Button>
           </div>
+
+          {/* Dialer Component */}
+          {showDialer && (
+            <div className="w-full">
+              <Dialer 
+                onCallStatusChange={(status, phoneNumber) => {
+                  console.log('📞 Call status changed:', status, phoneNumber);
+                  if (status === 'connected') {
+                    setIsCalling(true);
+                  } else if (status === 'disconnected') {
+                    setIsCalling(false);
+                  }
+                }}
+              />
+            </div>
+          )}
 
           {/* call logging */}
           <div className="w-full">
