@@ -23,45 +23,62 @@ const Dialer = () => {
       try {
         setIsLoading(true);
 
-        // Use axiosInstance instead of fetch and correct endpoint
         const response = await axiosInstance.get("/twilio/token");
         console.log("Received Twilio token:", response.data);
         const data = response.data;
 
         const device = new Device(data.token, {
-          // edge: "ashburn",
           logLevel: 2,
         });
 
         twilioDeviceRef.current = device;
 
-        console.log("Device: ", device);
-
         // Set up event listeners BEFORE registering
         device.on("ready", () => {
           console.log("Twilio Device is ready.");
           setCallStatus("Ready");
-          setIsLoading(false); // Move this here as well
+          setIsLoading(false);
         });
 
         device.on("error", (error) => {
           console.error("Twilio Device Error:", error);
           setCallStatus("Error");
-          setIsLoading(false); // Set loading false on error too
+          setIsLoading(false);
         });
 
+        // Fix the connect event to properly handle CallSid
         device.on("connect", async (connection) => {
           console.log("Successfully established call!");
-          setCallStatus("On Call");
-          setConn(connection);          // Store call metadata
-          try {
-            await axiosInstance.post("/twilio/call-started", {
-              callSid: connection.parameters.CallSid,
-              phoneNumber: VERIFIED_PHONE_NUMBER_TO_CALL,
-            });
-            console.log("✅ Call metadata stored successfully");
-          } catch (error) {
-            console.error("Failed to store call metadata:", error);
+          console.log("Connection object:", connection);
+          console.log("Connection parameters:", connection.parameters);
+
+          setCallStatus("Connected"); // Change from "On Call" to "Connected"
+          setConn(connection);
+
+          // Get CallSid from connection - try multiple possible locations
+          const callSid =
+            connection.parameters?.CallSid ||
+            connection.parameters?.callSid ||
+            connection.outgoingConnectionId ||
+            connection.parameters?.["Call-SID"];
+
+          console.log("Extracted CallSid:", callSid);
+
+          if (callSid) {
+            try {
+              console.log("🔄 Storing call metadata...");
+              const response = await axiosInstance.post("/twilio/call-started", {
+                callSid: callSid,
+                phoneNumber: VERIFIED_PHONE_NUMBER_TO_CALL,
+              });
+              console.log("✅ Call metadata stored successfully:", response.data);
+            } catch (error) {
+              console.error("❌ Failed to store call metadata:", error);
+            }
+          } else {
+            console.error("❌ Could not extract CallSid from connection");
+            console.error("Available connection properties:", Object.keys(connection));
+            console.error("Available parameters:", Object.keys(connection.parameters || {}));
           }
         });
 
@@ -71,14 +88,12 @@ const Dialer = () => {
           setConn(null);
         });
 
-        // Add registered event listener
         device.on("registered", () => {
           console.log("Device registered successfully");
           setCallStatus("Ready");
           setIsLoading(false);
         });
 
-        // Add unregistered event listener
         device.on("unregistered", () => {
           console.log("Device unregistered");
           setCallStatus("Offline");
@@ -87,7 +102,6 @@ const Dialer = () => {
         // Register the device
         await device.register();
 
-        // If we reach here without the ready event firing, set status manually
         setTimeout(() => {
           if (callStatus === "Offline" && device.state === "registered") {
             console.log("Device ready timeout - setting status manually");
@@ -119,10 +133,10 @@ const Dialer = () => {
       return;
     }
 
-    // The 'To' parameter is sent to your /api/twilio/voice webhook
     const params = { To: VERIFIED_PHONE_NUMBER_TO_CALL };
 
     console.log(`Attempting to call ${params.To}...`);
+    setCallStatus("Calling..."); // Add intermediate status
     device.connect({ params });
   };
 
@@ -135,13 +149,7 @@ const Dialer = () => {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          border: "1px solid #ccc",
-          padding: "20px",
-          borderRadius: "8px",
-        }}
-      >
+      <div style={{ border: "1px solid #ccc", padding: "20px", borderRadius: "8px" }}>
         <h2>Web Dialer</h2>
         <p>Loading Twilio Device...</p>
       </div>
@@ -149,17 +157,17 @@ const Dialer = () => {
   }
 
   return (
-    <div
-      style={{ border: "1px solid #ccc", padding: "20px", borderRadius: "8px" }}
-    >
+    <div style={{ border: "1px solid #ccc", padding: "20px", borderRadius: "8px" }}>
       <h2>Web Dialer</h2>
       <p>
         Status:{" "}
         <strong
           style={{
             color:
-              callStatus === "On Call"
+              callStatus === "Connected"
                 ? "green"
+                : callStatus === "Calling..."
+                ? "orange"
                 : callStatus === "Error"
                 ? "red"
                 : "black",
@@ -169,7 +177,7 @@ const Dialer = () => {
         </strong>
       </p>
 
-      {callStatus !== "On Call" ? (
+      {callStatus !== "Connected" && callStatus !== "Calling..." ? (
         <button
           onClick={handleCall}
           disabled={callStatus !== "Ready"}
