@@ -29,22 +29,25 @@ const Dialer = () => {
         const data = response.data;
 
         const device = new Device(data.token, {
-          edge: "ashburn",
-          logLevel: 1,
+          // edge: "ashburn",
+          logLevel: 2,
         });
 
         twilioDeviceRef.current = device;
 
         console.log("Device: ", device);
 
+        // Set up event listeners BEFORE registering
         device.on("ready", () => {
           console.log("Twilio Device is ready.");
           setCallStatus("Ready");
+          setIsLoading(false); // Move this here as well
         });
 
         device.on("error", (error) => {
           console.error("Twilio Device Error:", error);
           setCallStatus("Error");
+          setIsLoading(false); // Set loading false on error too
         });
 
         device.on("connect", (connection) => {
@@ -59,11 +62,33 @@ const Dialer = () => {
           setConn(null);
         });
 
+        // Add registered event listener
+        device.on("registered", () => {
+          console.log("Device registered successfully");
+          setCallStatus("Ready");
+          setIsLoading(false);
+        });
+
+        // Add unregistered event listener
+        device.on("unregistered", () => {
+          console.log("Device unregistered");
+          setCallStatus("Offline");
+        });
+
+        // Register the device
         await device.register();
+
+        // If we reach here without the ready event firing, set status manually
+        setTimeout(() => {
+          if (callStatus === "Offline" && device.state === "registered") {
+            console.log("Device ready timeout - setting status manually");
+            setCallStatus("Ready");
+            setIsLoading(false);
+          }
+        }, 3000);
       } catch (error) {
         console.error("Error setting up Twilio Device:", error);
         setCallStatus("Error");
-      } finally {
         setIsLoading(false);
       }
     };
