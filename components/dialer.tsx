@@ -50,10 +50,19 @@ const Dialer = () => {
           setIsLoading(false); // Set loading false on error too
         });
 
-        device.on("connect", (connection) => {
+        device.on("connect", async (connection) => {
           console.log("Successfully established call!");
           setCallStatus("On Call");
-          setConn(connection);
+          setConn(connection);          // Store call metadata
+          try {
+            await axiosInstance.post("/twilio/call-started", {
+              callSid: connection.parameters.CallSid,
+              phoneNumber: VERIFIED_PHONE_NUMBER_TO_CALL,
+            });
+            console.log("✅ Call metadata stored successfully");
+          } catch (error) {
+            console.error("Failed to store call metadata:", error);
+          }
         });
 
         device.on("disconnect", () => {
