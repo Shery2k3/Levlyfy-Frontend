@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import ProgressRing from "@/components/progress-ring";
 import PerformanceChart from "@/components/performance-chart";
-import Dialer from "@/components/dialer"; // Add this import
+import DialerModal from "@/components/dialer-modal";
 import {
   Phone,
   Clock,
@@ -22,7 +22,6 @@ import api from "@/lib/api";
 
 export default function HomePage() {
   const [isCalling, setIsCalling] = useState(false);
-  const [showDialer, setShowDialer] = useState(false); // Add this state
   const [currentQuote, setCurrentQuote] = useState(0);
   const [userStats, setUserStats] = useState<any>(null);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
@@ -270,13 +269,14 @@ export default function HomePage() {
 
           {/* Updated buttons section */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-            <Button 
-              className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center" 
-              onClick={() => setShowDialer(true)} // Changed from setIsCalling
-            >
-              <Phone className="mr-2 h-5 w-5" />
-              Call Next Customer
-            </Button>
+            <DialerModal
+              trigger={
+                <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
+                  <Phone className="mr-2 h-5 w-5" />
+                  Call Customer
+                </Button>
+              }
+            />
             <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
               <MessageSquareText className="mr-2 h-5 w-5" />
               Review AI Feedback
@@ -287,61 +287,38 @@ export default function HomePage() {
             </Button>
           </div>
 
-          {/* Replace call logging section with Dialer when active */}
+          {/* Call Logging Section */}
           <div className="w-full">
-            {showDialer ? (
-              <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold">Web Dialer</h2>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowDialer(false)}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    Close Dialer
-                  </Button>
-                </div>
-                <Dialer />
-              </div>
-            ) : (
-              <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
-                <h2 className="text-2xl font-bold mb-4">Call Logging</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-gray-400 border-b border-gray-700">
-                        <th className="pb-3 font-medium">Name</th>
-                        <th className="pb-3 font-medium">Phone</th>
-                        <th className="pb-3 font-medium">Notes</th>
-                        <th className="pb-3 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td colSpan={4} className="py-12 text-center text-gray-400">
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="p-4 bg-gray-700 rounded-full">
-                              <Phone className="w-8 h-8 text-gray-400" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-lg mb-1">Call Logs from Twilio</p>
-                              <p className="text-sm text-gray-500">Features: Auto-dialing, call logging, customer notes</p>
-                              <Button 
-                                className="mt-3 lime-button"
-                                onClick={() => setShowDialer(true)}
-                              >
-                                Start Calling
-                              </Button>
-                            </div>
+            <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+              <h2 className="text-2xl font-bold mb-4">Call Logging</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-gray-400 border-b border-gray-700">
+                      <th className="pb-3 font-medium">Name</th>
+                      <th className="pb-3 font-medium">Phone</th>
+                      <th className="pb-3 font-medium">Notes</th>
+                      <th className="pb-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colSpan={4} className="py-12 text-center text-gray-400">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="p-4 bg-gray-700 rounded-full">
+                            <Phone className="w-8 h-8 text-gray-400" />
                           </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                          <div>
+                            <p className="font-semibold text-lg mb-1">Call Logs from Twilio</p>
+                            <p className="text-sm text-gray-500">Features: Auto-dialing, call logging, customer notes</p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
