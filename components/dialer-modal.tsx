@@ -17,10 +17,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Phone, PhoneCall, PhoneOff, Loader2 } from "lucide-react"
+import { Phone, PhoneCall, PhoneOff, Loader2, Mic, MicOff } from "lucide-react"
 
 const countries = [
   { code: "+1", country: "United States", flag: "🇺🇸", iso: "US" },
+  { code: "+92", country: "Pakistan", flag: "🇵🇰", iso: "PK" },
   { code: "+1", country: "Canada", flag: "🇨🇦", iso: "CA" },
   { code: "+44", country: "United Kingdom", flag: "🇬🇧", iso: "GB" },
   { code: "+33", country: "France", flag: "🇫🇷", iso: "FR" },
@@ -69,40 +70,54 @@ const countries = [
   { code: "+7", country: "Russia", flag: "🇷🇺", iso: "RU" },
 ]
 
-// Use the verified phone number from your .env
-const VERIFIED_PHONE_NUMBER_TO_CALL = "+923142113157";
-
 interface DialerModalProps {
   trigger?: React.ReactNode;
 }
 
 export default function DialerModal({ trigger }: DialerModalProps) {
-  const [selectedCountry, setSelectedCountry] = useState("+1")
+  const [selectedCountry, setSelectedCountry] = useState("+92")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   
   // Twilio states
   const twilioDeviceRef = useRef<Device | null>(null);
-  const [callStatus, setCallStatus] = useState("Offline");
-  const [conn, setConn] = useState(null);
+  const [callStatus, setCallStatus] = useState("Initializing");
+  const [conn, setConn] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+
+  // Reset modal state
+  const resetModalState = () => {
+    setPhoneNumber("");
+    setSelectedCountry("+1");
+    setIsMuted(false);
+  };
+
+  // Close modal gracefully
+  const closeModal = () => {
+    setIsOpen(false);
+    setTimeout(() => {
+      resetModalState();
+    }, 300); // Wait for modal animation to complete
+  };
 
   // Fetch token and initialize Twilio Device
   useEffect(() => {
-    if (twilioDeviceRef.current) {
+    if (!isOpen || twilioDeviceRef.current) {
       return;
     }
 
     const setupTwilioDevice = async () => {
       try {
         setIsLoading(true);
+        setCallStatus("Connecting to Twilio...");
 
         const response = await axiosInstance.get("/twilio/token");
         console.log("Received Twilio token:", response.data);
         const data = response.data;
 
         const device = new Device(data.token, {
-          logLevel: 2,
+          logLevel: 1,
         });
 
         twilioDeviceRef.current = device;
@@ -120,7 +135,6 @@ export default function DialerModal({ trigger }: DialerModalProps) {
           setIsLoading(false);
         });
 
-        // Fix the connect event to properly handle CallSid
         device.on("connect", async (connection) => {
           console.log("Successfully established call!");
           console.log("Connection object:", connection);
@@ -141,9 +155,10 @@ export default function DialerModal({ trigger }: DialerModalProps) {
           if (callSid) {
             try {
               console.log("🔄 Storing call metadata...");
+              const numberCalled = `${selectedCountry}${phoneNumber.replace(/\D/g, '')}`;
               const response = await axiosInstance.post("/twilio/call-started", {
                 callSid: callSid,
-                phoneNumber: VERIFIED_PHONE_NUMBER_TO_CALL,
+                phoneNumber: numberCalled,
               });
               console.log("✅ Call metadata stored successfully:", response.data);
             } catch (error) {
@@ -160,6 +175,7 @@ export default function DialerModal({ trigger }: DialerModalProps) {
           console.log("Call disconnected.");
           setCallStatus("Ready");
           setConn(null);
+          setIsMuted(false);
         });
 
         device.on("registered", () => {
@@ -177,7 +193,7 @@ export default function DialerModal({ trigger }: DialerModalProps) {
         await device.register();
 
         setTimeout(() => {
-          if (callStatus === "Offline" && device.state === "registered") {
+          if (callStatus === "Connecting to Twilio..." && device.state === "registered") {
             console.log("Device ready timeout - setting status manually");
             setCallStatus("Ready");
             setIsLoading(false);
@@ -191,7 +207,10 @@ export default function DialerModal({ trigger }: DialerModalProps) {
     };
 
     setupTwilioDevice();
+  }, [isOpen]);
 
+  // Clean up on unmount
+  useEffect(() => {
     return () => {
       if (twilioDeviceRef.current) {
         twilioDeviceRef.current.destroy();
@@ -207,9 +226,14 @@ export default function DialerModal({ trigger }: DialerModalProps) {
       return;
     }
 
-    // Use the verified number for now, but you could extend this to use custom numbers
-    const numberToCall = VERIFIED_PHONE_NUMBER_TO_CALL;
-    // For custom dialing: const numberToCall = `${selectedCountry}${phoneNumber.replace(/\D/g, '')}`;
+    if (!phoneNumber.trim()) {
+      alert("Please enter a phone number to call.");
+      return;
+    }
+
+    // Clean the phone number and create the full number
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    const numberToCall = `${selectedCountry}${cleanNumber}`;
 
     const params = { To: numberToCall };
 
@@ -222,6 +246,24 @@ export default function DialerModal({ trigger }: DialerModalProps) {
     const device = twilioDeviceRef.current;
     if (device) {
       device.disconnectAll();
+    }
+    // Close modal gracefully after hanging up
+    setTimeout(() => {
+      closeModal();
+    }, 1000);
+  };
+
+  const handleMute = () => {
+    if (conn) {
+      if (isMuted) {
+        conn.mute(false);
+        setIsMuted(false);
+        console.log("Call unmuted");
+      } else {
+        conn.mute(true);
+        setIsMuted(true);
+        console.log("Call muted");
+      }
     }
   };
 
@@ -253,7 +295,11 @@ export default function DialerModal({ trigger }: DialerModalProps) {
       case "Error":
         return "text-red-400"
       case "Ready":
-        return "text-green-400"
+        return "text-lime-400"
+      case "Connecting to Twilio...":
+        return "text-blue-400"
+      case "Initializing":
+        return "text-gray-400"
       default:
         return "text-gray-400"
     }
@@ -265,12 +311,15 @@ export default function DialerModal({ trigger }: DialerModalProps) {
     }
     switch (callStatus) {
       case "Connected":
+        return <PhoneCall className="w-4 h-4 text-green-400" />
       case "Calling...":
-        return <PhoneCall className="w-4 h-4" />
+        return <PhoneCall className="w-4 h-4 text-yellow-400 animate-pulse" />
       case "Ready":
-        return <Phone className="w-4 h-4" />
+        return <Phone className="w-4 h-4 text-lime-400" />
+      case "Error":
+        return <PhoneOff className="w-4 h-4 text-red-400" />
       default:
-        return <PhoneOff className="w-4 h-4" />
+        return <Phone className="w-4 h-4 text-gray-400" />
     }
   }
 
@@ -291,7 +340,14 @@ export default function DialerModal({ trigger }: DialerModalProps) {
             Make a Call
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            {isLoading ? "Initializing Twilio Device..." : "Ready to make calls via Twilio"}
+            {isLoading 
+              ? "Initializing Twilio Device..." 
+              : callStatus === "Connected"
+              ? "Call in progress - Use controls below"
+              : callStatus === "Ready"
+              ? "Enter a phone number and start calling"
+              : "Setting up calling capabilities..."
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -307,23 +363,12 @@ export default function DialerModal({ trigger }: DialerModalProps) {
             </div>
           </div>
 
-          {/* For demo purposes, we'll show the verified number that will be called */}
-          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
-            <div className="text-sm text-yellow-400 mb-1">Demo Mode - Calling Verified Number:</div>
-            <div className="text-lg font-mono text-yellow-300">
-              {VERIFIED_PHONE_NUMBER_TO_CALL}
-            </div>
-            <div className="text-xs text-yellow-600 mt-1">
-              This is the only number we can call in Twilio trial mode
-            </div>
-          </div>
-
-          {/* Country Selector - For future use when not in trial mode */}
-          <div className="space-y-2 opacity-50">
+          {/* Country Selector */}
+          <div className="space-y-2">
             <Label htmlFor="country" className="text-sm font-medium text-gray-300">
-              Country (Future Feature)
+              Country
             </Label>
-            <Select value={selectedCountry} onValueChange={setSelectedCountry} disabled>
+            <Select value={selectedCountry} onValueChange={setSelectedCountry}>
               <SelectTrigger className="bg-gray-700 border-gray-600 text-white focus:border-lime-500 focus:ring-lime-500">
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>
@@ -345,10 +390,10 @@ export default function DialerModal({ trigger }: DialerModalProps) {
             </Select>
           </div>
 
-          {/* Phone Number Input - For future use when not in trial mode */}
-          <div className="space-y-2 opacity-50">
+          {/* Phone Number Input */}
+          <div className="space-y-2">
             <Label htmlFor="phone" className="text-sm font-medium text-gray-300">
-              Phone Number (Future Feature)
+              Phone Number
             </Label>
             <div className="flex gap-2">
               <div className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-lime-400 font-medium min-w-fit">
@@ -361,18 +406,56 @@ export default function DialerModal({ trigger }: DialerModalProps) {
                 value={phoneNumber}
                 onChange={handlePhoneChange}
                 className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 focus:border-lime-500 focus:ring-lime-500 flex-1"
-                maxLength={12}
-                disabled
+                maxLength={15}
+                disabled={callStatus === "Connected" || callStatus === "Calling..."}
               />
             </div>
           </div>
 
+          {/* Full Number Display */}
+          {phoneNumber && (
+            <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+              <div className="text-sm text-gray-400 mb-1">Complete Number:</div>
+              <div className="text-lg font-mono text-lime-400">
+                {selectedCountry} {phoneNumber}
+              </div>
+            </div>
+          )}
+
+          {/* Call Controls - Show when connected */}
+          {callStatus === "Connected" && (
+            <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-green-400 mb-1">Call Active</div>
+                  <div className="text-xs text-green-600">
+                    Connected to {selectedCountry} {phoneNumber}
+                  </div>
+                </div>
+                <Button
+                  onClick={handleMute}
+                  size="sm"
+                  variant="outline"
+                  className={`${
+                    isMuted 
+                      ? "bg-red-500 hover:bg-red-600 text-white border-red-500" 
+                      : "bg-gray-600 hover:bg-gray-500 text-white border-gray-500"
+                  }`}
+                >
+                  {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {isMuted ? "Unmute" : "Mute"}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
             <Button
-              onClick={() => setIsOpen(false)}
+              onClick={closeModal}
               variant="outline"
               className="flex-1 bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+              disabled={callStatus === "Connected" || callStatus === "Calling..."}
             >
               Cancel
             </Button>
@@ -380,7 +463,7 @@ export default function DialerModal({ trigger }: DialerModalProps) {
             {callStatus !== "Connected" && callStatus !== "Calling..." ? (
               <Button
                 onClick={handleCall}
-                disabled={callStatus !== "Ready" || isLoading}
+                disabled={callStatus !== "Ready" || isLoading || !phoneNumber.trim()}
                 className="flex-1 bg-lime-500 hover:bg-lime-600 text-black disabled:bg-gray-600 disabled:text-gray-400 flex items-center gap-2 font-medium"
               >
                 {isLoading ? (
@@ -388,7 +471,7 @@ export default function DialerModal({ trigger }: DialerModalProps) {
                 ) : (
                   <PhoneCall className="w-4 h-4" />
                 )}
-                {isLoading ? "Initializing..." : "Call Now"}
+                {isLoading ? "Connecting..." : "Call Now"}
               </Button>
             ) : (
               <Button
