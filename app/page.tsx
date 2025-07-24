@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import ProgressRing from "@/components/progress-ring";
 import PerformanceChart from "@/components/performance-chart";
 import DialerModal from "@/components/dialer-modal";
@@ -13,6 +16,11 @@ import {
   MessageSquareText,
   Star,
   TrendingUp,
+  Brain,
+  FileText,
+  BarChart3,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import TeamHighlights from "@/components/team-highlights";
 import LeaderboardHighlights from "@/components/leaderboard-highlights";
@@ -27,6 +35,11 @@ export default function HomePage() {
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [recentCalls, setRecentCalls] = useState<any[]>([]);
+  const [callsLoading, setCallsLoading] = useState(false);
+  const [selectedCall, setSelectedCall] = useState<any>(null);
+  const [feedbackCalls, setFeedbackCalls] = useState<any[]>([]);
   const { user } = useAuth();
 
   // Generate mock historical data based on current stats
@@ -138,6 +151,7 @@ export default function HomePage() {
   useEffect(() => {
     fetchUserStats();
     fetchLeaderboardData();
+    fetchRecentCalls();
   }, []);
 
   const fetchUserStats = async () => {
@@ -163,6 +177,41 @@ export default function HomePage() {
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
     }
+  };
+
+  const fetchRecentCalls = async () => {
+    setCallsLoading(true);
+    try {
+      const response = await api.get('/call/my-calls');
+      // Get the 5 most recent calls
+      const calls = response.data.data?.slice(0, 5) || [];
+      setRecentCalls(calls);
+    } catch (error) {
+      console.error('Failed to fetch recent calls:', error);
+    } finally {
+      setCallsLoading(false);
+    }
+  };
+
+  const fetchFeedbackCalls = async () => {
+    try {
+      const response = await api.get('/call/my-calls');
+      // Filter calls that have been analyzed
+      const analyzedCalls = response.data.data?.filter((call: any) => call.status === 'analyzed') || [];
+      setFeedbackCalls(analyzedCalls);
+    } catch (error) {
+      console.error('Failed to fetch feedback calls:', error);
+    }
+  };
+
+  const viewCallFeedback = (call: any) => {
+    setSelectedCall(call);
+    setShowFeedbackModal(true);
+  };
+
+  const openFeedbackModal = async () => {
+    await fetchFeedbackCalls();
+    setShowFeedbackModal(true);
   };
 
   useEffect(() => {
@@ -268,7 +317,7 @@ export default function HomePage() {
           </div>
 
           {/* Updated buttons section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
             <DialerModal
               trigger={
                 <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
@@ -277,44 +326,106 @@ export default function HomePage() {
                 </Button>
               }
             />
-            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
+            <Button 
+              onClick={openFeedbackModal}
+              className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center"
+            >
               <MessageSquareText className="mr-2 h-5 w-5" />
               Review AI Feedback
-            </Button>
-            <Button className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center">
-              <Clock className="mr-2 h-5 w-5" />
-              History
             </Button>
           </div>
 
           {/* Call Logging Section */}
           <div className="w-full">
             <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
-              <h2 className="text-2xl font-bold mb-4">Call Logging</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Recent Call Logs</h2>
+                <Button 
+                  onClick={fetchRecentCalls}
+                  variant="outline" 
+                  size="sm"
+                  disabled={callsLoading}
+                >
+                  {callsLoading ? "Loading..." : "Refresh"}
+                </Button>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-gray-400 border-b border-gray-700">
-                      <th className="pb-3 font-medium">Name</th>
-                      <th className="pb-3 font-medium">Phone</th>
-                      <th className="pb-3 font-medium">Notes</th>
+                      <th className="pb-3 font-medium">Date</th>
+                      <th className="pb-3 font-medium">Duration</th>
                       <th className="pb-3 font-medium">Status</th>
+                      <th className="pb-3 font-medium">Score</th>
+                      <th className="pb-3 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td colSpan={4} className="py-12 text-center text-gray-400">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="p-4 bg-gray-700 rounded-full">
-                            <Phone className="w-8 h-8 text-gray-400" />
+                    {callsLoading ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-400">
+                          <div className="animate-pulse">Loading calls...</div>
+                        </td>
+                      </tr>
+                    ) : recentCalls.length > 0 ? (
+                      recentCalls.map((call) => (
+                        <tr key={call._id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                          <td className="py-3 text-sm">
+                            {new Date(call.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 text-sm">
+                            {call.duration ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '-'}
+                          </td>
+                          <td className="py-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              call.status === 'analyzed' ? 'bg-green-900 text-green-300' :
+                              call.status === 'processing' ? 'bg-yellow-900 text-yellow-300' :
+                              call.status === 'failed' ? 'bg-red-900 text-red-300' :
+                              'bg-gray-900 text-gray-300'
+                            }`}>
+                              {call.status}
+                            </span>
+                          </td>
+                          <td className="py-3 text-sm">
+                            {call.score ? (
+                              <span className={`font-medium ${
+                                call.score >= 80 ? 'text-green-400' :
+                                call.score >= 60 ? 'text-yellow-400' :
+                                'text-red-400'
+                              }`}>
+                                {call.score}/100
+                              </span>
+                            ) : '-'}
+                          </td>
+                          <td className="py-3">
+                            {call.status === 'analyzed' && (
+                              <Button
+                                onClick={() => viewCallFeedback(call)}
+                                variant="outline"
+                                size="sm"
+                                className="text-xs"
+                              >
+                                View Feedback
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center text-gray-400">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="p-4 bg-gray-700 rounded-full">
+                              <Phone className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-lg mb-1">No calls yet</p>
+                              <p className="text-sm text-gray-500">Start making calls to see your logs here</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-lg mb-1">Call Logs from Twilio</p>
-                            <p className="text-sm text-gray-500">Features: Auto-dialing, call logging, customer notes</p>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -398,6 +509,165 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* AI Feedback Modal */}
+      <Dialog open={showFeedbackModal} onOpenChange={setShowFeedbackModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Brain className="w-6 h-6 text-blue-400" />
+              AI Call Analysis & Feedback
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Review AI-generated insights and feedback from your analyzed calls
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCall ? (
+            // Single call feedback view
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">
+                  Call from {new Date(selectedCall.createdAt).toLocaleDateString()}
+                </h3>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedCall(null)}
+                  size="sm"
+                >
+                  Back to All Calls
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gray-800 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-medium">Overall Score</span>
+                  </div>
+                  <div className={`text-2xl font-bold ${
+                    selectedCall.score >= 80 ? 'text-green-400' :
+                    selectedCall.score >= 60 ? 'text-yellow-400' :
+                    'text-red-400'
+                  }`}>
+                    {selectedCall.score || 'N/A'}/100
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquareText className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm font-medium">Sentiment</span>
+                  </div>
+                  <Badge variant={
+                    selectedCall.sentiment === 'positive' ? 'default' :
+                    selectedCall.sentiment === 'negative' ? 'destructive' :
+                    'secondary'
+                  }>
+                    {selectedCall.sentiment || 'neutral'}
+                  </Badge>
+                </div>
+
+                <div className="bg-gray-800 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="w-4 h-4 text-yellow-400" />
+                    <span className="text-sm font-medium">Results</span>
+                  </div>
+                  <div className="space-y-1">
+                    {selectedCall.dealClosed && <Badge className="bg-green-900 text-green-300">Deal Closed</Badge>}
+                    {selectedCall.upsell && <Badge className="bg-blue-900 text-blue-300">Upsell</Badge>}
+                    {!selectedCall.dealClosed && !selectedCall.upsell && <span className="text-gray-400 text-sm">No deal</span>}
+                  </div>
+                </div>
+              </div>
+
+              {selectedCall.summary && (
+                <div className="bg-gray-800 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Call Summary
+                  </h4>
+                  <p className="text-gray-300 text-sm leading-relaxed">{selectedCall.summary}</p>
+                </div>
+              )}
+
+              {selectedCall.feedback && (
+                <div className="bg-gray-800 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-blue-400" />
+                    AI Feedback & Recommendations
+                  </h4>
+                  <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{selectedCall.feedback}</p>
+                </div>
+              )}
+
+              {selectedCall.transcript && (
+                <div className="bg-gray-800 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Call Transcript</h4>
+                  <div className="max-h-40 overflow-y-auto text-sm text-gray-300 leading-relaxed">
+                    {selectedCall.transcript}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            // List of all calls with feedback
+            <div className="space-y-4">
+              {feedbackCalls.length > 0 ? (
+                <div className="space-y-3">
+                  {feedbackCalls.map((call) => (
+                    <div 
+                      key={call._id} 
+                      className="bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors"
+                      onClick={() => setSelectedCall(call)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">
+                            {new Date(call.createdAt).toLocaleDateString()} at {new Date(call.createdAt).toLocaleTimeString()}
+                          </span>
+                          <Badge variant={
+                            call.sentiment === 'positive' ? 'default' :
+                            call.sentiment === 'negative' ? 'destructive' :
+                            'secondary'
+                          }>
+                            {call.sentiment || 'neutral'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {call.dealClosed && <ThumbsUp className="w-4 h-4 text-green-400" />}
+                          {call.upsell && <Star className="w-4 h-4 text-yellow-400" />}
+                          <span className={`font-bold ${
+                            call.score >= 80 ? 'text-green-400' :
+                            call.score >= 60 ? 'text-yellow-400' :
+                            'text-red-400'
+                          }`}>
+                            {call.score || 'N/A'}/100
+                          </span>
+                        </div>
+                      </div>
+                      {call.summary && (
+                        <p className="text-sm text-gray-400 line-clamp-2">{call.summary}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Brain className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No AI Feedback Available</h3>
+                  <p className="text-gray-400 mb-4">
+                    Start making calls to get AI-powered insights and feedback on your performance.
+                  </p>
+                  <Button onClick={() => setShowFeedbackModal(false)}>
+                    Start Calling
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
