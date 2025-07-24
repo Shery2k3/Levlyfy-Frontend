@@ -154,6 +154,15 @@ export default function HomePage() {
     fetchRecentCalls();
   }, []);
 
+  // Debug effect to log state changes
+  useEffect(() => {
+    console.log('Recent calls state updated:', recentCalls);
+  }, [recentCalls]);
+
+  useEffect(() => {
+    console.log('Feedback calls state updated:', feedbackCalls);
+  }, [feedbackCalls]);
+
   const fetchUserStats = async () => {
     try {
       const response = await api.get('/performance/leaderboard/me?period=alltime');
@@ -183,8 +192,10 @@ export default function HomePage() {
     setCallsLoading(true);
     try {
       const response = await api.get('/call/my-calls');
-      // Get the 5 most recent calls
-      const calls = response.data.data?.slice(0, 5) || [];
+      console.log('Raw API response:', response.data);
+      // Get the 5 most recent calls - the calls are nested under data.calls
+      const calls = response.data.data?.calls?.slice(0, 5) || [];
+      console.log('Extracted calls:', calls);
       setRecentCalls(calls);
     } catch (error) {
       console.error('Failed to fetch recent calls:', error);
@@ -196,8 +207,11 @@ export default function HomePage() {
   const fetchFeedbackCalls = async () => {
     try {
       const response = await api.get('/call/my-calls');
-      // Filter calls that have been analyzed
-      const analyzedCalls = response.data.data?.filter((call: any) => call.status === 'analyzed') || [];
+      console.log('Feedback calls API response:', response.data);
+      // Filter calls that have been analyzed - the calls are nested under data.calls
+      const allCalls = response.data.data?.calls || [];
+      const analyzedCalls = allCalls.filter((call: any) => call.status === 'analyzed');
+      console.log('Analyzed calls:', analyzedCalls);
       setFeedbackCalls(analyzedCalls);
     } catch (error) {
       console.error('Failed to fetch feedback calls:', error);
@@ -331,7 +345,7 @@ export default function HomePage() {
               className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center"
             >
               <MessageSquareText className="mr-2 h-5 w-5" />
-              Review AI Feedback
+              Latest AI Feedback
             </Button>
           </div>
 
@@ -354,7 +368,7 @@ export default function HomePage() {
                   <thead>
                     <tr className="text-left text-gray-400 border-b border-gray-700">
                       <th className="pb-3 font-medium">Date</th>
-                      <th className="pb-3 font-medium">Duration</th>
+                      <th className="pb-3 font-medium">Source</th>
                       <th className="pb-3 font-medium">Status</th>
                       <th className="pb-3 font-medium">Score</th>
                       <th className="pb-3 font-medium">Actions</th>
@@ -371,10 +385,15 @@ export default function HomePage() {
                       recentCalls.map((call) => (
                         <tr key={call._id} className="border-b border-gray-700 hover:bg-gray-700/50">
                           <td className="py-3 text-sm">
-                            {new Date(call.createdAt).toLocaleDateString()}
+                            {new Date(call.createdAt).toLocaleDateString()} {new Date(call.createdAt).toLocaleTimeString()}
                           </td>
                           <td className="py-3 text-sm">
-                            {call.duration ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '-'}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              call.source === 'twilio-recording' ? 'bg-blue-900 text-blue-300' :
+                              'bg-purple-900 text-purple-300'
+                            }`}>
+                              {call.source === 'twilio-recording' ? 'Twilio' : 'Manual'}
+                            </span>
                           </td>
                           <td className="py-3">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
