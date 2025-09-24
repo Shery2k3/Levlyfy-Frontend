@@ -9,6 +9,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import api from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { AuthUser } from "@/types/api";
 
 interface AuthContextType {
@@ -25,6 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const pathname = usePathname();
+  const { toast } = useToast();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -71,7 +73,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (err: any) {
         // axios errors contain response.status
         if (err?.response?.status === 401) {
-          // Token is stale — logout immediately
+          // Token is stale — show toast, logout and redirect
+          try {
+            toast?.({
+              title: "Session expired",
+              description: "Your session has expired. Please sign in again.",
+            });
+          } catch (e) {
+            // swallow toast errors
+          }
           logout();
           if (typeof window !== "undefined") {
             window.location.href = "/auth/login";

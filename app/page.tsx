@@ -46,6 +46,10 @@ export default function HomePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [twilioDevice, setTwilioDevice] = useState<any>(null);
+  // Missing call state variables (fixes TS2304 errors)
+  const [callConnected, setCallConnected] = useState<boolean>(false);
+  const [currentCallNumber, setCurrentCallNumber] = useState<string>("");
+  const [currentCallName, setCurrentCallName] = useState<string>("");
 
   useEffect(() => {
     const setupTwilio = async () => {
