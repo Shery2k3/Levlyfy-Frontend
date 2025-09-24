@@ -7,6 +7,8 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
+import api from "@/lib/api";
 import { AuthUser } from "@/types/api";
 
 interface AuthContextType {
@@ -22,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -53,6 +56,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
   };
+
+  // Validate token on route change and periodically
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+
+    const validate = async () => {
+      try {
+        // call /me (baseURL already contains /api)
+        await api.get("/me");
+        // if success, do nothing
+      } catch (err: any) {
+        // axios errors contain response.status
+        if (err?.response?.status === 401) {
+          // Token is stale — logout immediately
+          logout();
+          if (typeof window !== "undefined") {
+            window.location.href = "/auth/login";
+          }
+        } else {
+          // other errors are ignored here but logged
+          // keep token as-is
+          // console.error("Token validation error:", err);
+        }
+      }
+    };
+
+    // validate immediately when token or pathname changes
+    validate();
+
+    // set up periodic validation (every 5 minutes)
+    const interval = setInterval(() => {
+      validate();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [token, pathname]); // re-run on route change
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout,signUp }}>
