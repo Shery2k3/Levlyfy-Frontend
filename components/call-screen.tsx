@@ -10,18 +10,33 @@ interface CallScreenProps {
   contactPhone?: string;
   onEndCall: () => void;
   isConnected: boolean;
+  callStatus: "idle" | "calling" | "ringing" | "connected" | "disconnected";
 }
 
-export default function CallScreen({ 
-  contactName = "Unknown", 
-  contactPhone = "", 
-  onEndCall, 
-  isConnected 
+export default function CallScreen({
+  contactName = "Unknown",
+  contactPhone = "",
+  onEndCall,
+  isConnected,
+  callStatus,
 }: CallScreenProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [notes, setNotes] = useState("");
+
+  const getStatusText = () => {
+    switch (callStatus) {
+      case "ringing":
+        return "Ringing...";
+      case "connected":
+        return "Connected";
+      case "disconnected":
+        return "Call Ended";
+      default:
+        return "Connecting...";
+    }
+  };
 
   // Timer for call duration
   useEffect(() => {
@@ -39,7 +54,9 @@ export default function CallScreen({
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   return (
@@ -54,17 +71,23 @@ export default function CallScreen({
               </span>
             </div>
           </div>
-          <h2 className="text-xl font-semibold text-white mb-1">{contactName}</h2>
+          <h2 className="text-xl font-semibold text-white mb-1">
+            {contactName}
+          </h2>
           <p className="text-blue-100 text-sm mb-2">{contactPhone}</p>
-          
+
           {/* Call Status */}
           <div className="flex items-center justify-center gap-2 mb-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`}></div>
+            <div className={`w-2 h-2 rounded-full ${
+              callStatus === "connected" ? 'bg-green-400' :
+              callStatus === "ringing" ? 'bg-yellow-400' :
+              'bg-gray-400'
+            } animate-pulse`}></div>
             <span className="text-white text-sm">
-              {isConnected ? 'Connected' : 'Connecting...'}
+              {getStatusText()}
             </span>
           </div>
-          
+
           {/* Call Duration */}
           {isConnected && (
             <div className="flex items-center justify-center gap-1 text-blue-100">
@@ -80,21 +103,33 @@ export default function CallScreen({
             <Button
               onClick={() => setIsMuted(!isMuted)}
               className={`w-12 h-12 rounded-full ${
-                isMuted ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'
+                isMuted
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {isMuted ? (
+                <MicOff className="w-5 h-5" />
+              ) : (
+                <Mic className="w-5 h-5" />
+              )}
             </Button>
-            
+
             <Button
               onClick={() => setIsSpeakerOn(!isSpeakerOn)}
               className={`w-12 h-12 rounded-full ${
-                isSpeakerOn ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
+                isSpeakerOn
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              {isSpeakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              {isSpeakerOn ? (
+                <Volume2 className="w-5 h-5" />
+              ) : (
+                <VolumeX className="w-5 h-5" />
+              )}
             </Button>
-            
+
             <Button
               onClick={onEndCall}
               className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700"
@@ -105,7 +140,9 @@ export default function CallScreen({
 
           {/* Call Notes */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">Call Notes</label>
+            <label className="text-sm font-medium text-gray-300">
+              Call Notes
+            </label>
             <Textarea
               placeholder="Add notes about this call..."
               value={notes}

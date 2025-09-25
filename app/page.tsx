@@ -4,7 +4,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import ProgressRing from "@/components/progress-ring";
@@ -50,11 +56,14 @@ export default function HomePage() {
   const [callConnected, setCallConnected] = useState<boolean>(false);
   const [currentCallNumber, setCurrentCallNumber] = useState<string>("");
   const [currentCallName, setCurrentCallName] = useState<string>("");
+  const [callStatus, setCallStatus] = useState<
+    "idle" | "calling" | "ringing" | "connected" | "disconnected"
+  >("idle");
 
   useEffect(() => {
     const setupTwilio = async () => {
       // Only run on client side
-      if (typeof window === 'undefined') {
+      if (typeof window === "undefined") {
         return;
       }
 
@@ -63,19 +72,19 @@ export default function HomePage() {
         // Request microphone permission first
         await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("✅ Microphone permission granted!");
-        
+
         console.log("🎫 Fetching Twilio token...");
         const response = await api.get("/twillio/token");
         const { token } = response.data;
         console.log("✅ Token received! Length:", token.length);
-        
+
         console.log("📱 Setting up Twilio Device with token");
-        
+
         // Dynamically import Twilio Device to avoid SSR issues
         const { Device } = await import("twilio-client");
         const device = new Device();
         console.log("📱 Device instance created, setting up...");
-        
+
         device.setup(token, {
           codecPreferences: ["pcmu", "opus"] as any,
           fakeLocalDTMF: true,
@@ -105,22 +114,31 @@ export default function HomePage() {
         });
 
         device.on("connect", (conn) => {
-          console.log("🔗 Call connected! Connection details:", conn);
-          console.log("🔗 Connection parameters:", conn.parameters);
-          setCallConnected(true);
+          console.log("🔗 Call initiated! Waiting for answer. Connection details:", conn);
+          setCallStatus("ringing");
           toast({
-            title: "Connected",
-            description: "Call is now active. You can speak!",
+            title: "Ringing",
+            description: "Waiting for the other person to answer...",
+          });
+
+          conn.on('accept', (connection) => {
+            console.log("✅ Call accepted! Connection:", connection);
+            setCallConnected(true);
+            setCallStatus("connected");
+            toast({
+                title: "Connected",
+                description: "You can now speak!",
+            });
           });
         });
 
         device.on("disconnect", (conn) => {
           console.log("📞 Call disconnected. Connection:", conn);
-          console.log("📞 Disconnect reason:", conn ? conn.error : 'Unknown');
           setIsCalling(false);
           setCallConnected(false);
           setCurrentCallNumber("");
           setCurrentCallName("");
+          setCallStatus("disconnected");
           toast({
             title: "Call Ended",
             description: "The call has been disconnected.",
@@ -133,16 +151,18 @@ export default function HomePage() {
           console.log("📞 Connection parameters:", conn.parameters);
           console.log("📞 From:", conn.parameters?.From);
           console.log("📞 To:", conn.parameters?.To);
-          
+
           toast({
             title: "Incoming Call",
             description: "Connecting your browser to the phone call...",
           });
-          
+
           console.log("📞 Accepting incoming connection...");
           // Auto-accept the incoming connection from your backend
           conn.accept();
-          console.log("✅ Connection accepted! You should be able to speak now!");
+          console.log(
+            "✅ Connection accepted! You should be able to speak now!"
+          );
         });
 
         device.on("cancel", () => {
@@ -152,7 +172,6 @@ export default function HomePage() {
         device.on("presence", (presenceEvent) => {
           console.log("👥 Presence event:", presenceEvent);
         });
-
       } catch (error) {
         console.error("❌ Error setting up Twilio:", error);
         console.error("❌ Full error object:", error);
@@ -172,7 +191,7 @@ export default function HomePage() {
     }
 
     return () => {
-      if (twilioDevice && typeof window !== 'undefined') {
+      if (twilioDevice && typeof window !== "undefined") {
         console.log("🧹 Cleaning up Twilio device");
         twilioDevice.destroy();
         setTwilioDevice(null);
@@ -184,7 +203,7 @@ export default function HomePage() {
     console.log("🚀 HANDLE CALL CLICKED!");
     console.log("📱 Twilio Device Status:", twilioDevice?.status());
     console.log("📱 Device Ready?", twilioDevice ? "YES" : "NO");
-    
+
     if (!twilioDevice) {
       console.error("❌ Twilio device not ready!");
       toast({
@@ -194,7 +213,7 @@ export default function HomePage() {
       });
       return;
     }
-    
+
     // Use the provided number or fallback to the hardcoded one
     const phoneNumber = numberToCall || "+923142113157";
     console.log("📞 About to call:", phoneNumber);
@@ -205,18 +224,21 @@ export default function HomePage() {
 
     try {
       console.log("📡 Making API call to start-call...");
-      const response = await api.post("/twillio/start-call", { to: phoneNumber });
+      const response = await api.post("/twillio/start-call", {
+        to: phoneNumber,
+      });
       console.log("✅ Start-call API response:", response.data);
-      
+
       setIsCalling(true);
       toast({
         title: "Calling",
         description: `Calling ${contactName || phoneNumber}...`,
       });
-      
+
       console.log("📞 Call initiated! Now waiting for incoming connection...");
-      console.log("📞 Expected flow: Phone rings → You answer → Press key → Browser receives 'incoming' event");
-      
+      console.log(
+        "📞 Expected flow: Phone rings → You answer → Press key → Browser receives 'incoming' event"
+      );
     } catch (error: any) {
       console.error("❌ Error starting call:", error);
       console.error("❌ Error response:", error.response?.data);
@@ -245,48 +267,66 @@ export default function HomePage() {
   // Generate mock historical data based on current stats
   const generatePerformanceHistory = (currentStats: any) => {
     if (!currentStats) return [];
-    
+
     const weeks = 8; // Show 8 weeks of data
     const history = [];
-    
+
     // Calculate realistic progressions
     const totalCalls = currentStats.callsMade || 0;
     const totalDeals = currentStats.dealsClosed || 0;
     const totalUpsells = currentStats.upsells || 0;
-    
+
     // If user has very low stats, create a more visible progression
-    const minCallsPerWeek = totalCalls > 0 ? Math.max(1, Math.floor(totalCalls / weeks)) : 1;
-    const minDealsPerWeek = totalDeals > 0 ? Math.max(0, Math.floor(totalDeals / weeks)) : 0;
-    const minUpsellsPerWeek = totalUpsells > 0 ? Math.max(0, Math.floor(totalUpsells / weeks)) : 0;
-    
+    const minCallsPerWeek =
+      totalCalls > 0 ? Math.max(1, Math.floor(totalCalls / weeks)) : 1;
+    const minDealsPerWeek =
+      totalDeals > 0 ? Math.max(0, Math.floor(totalDeals / weeks)) : 0;
+    const minUpsellsPerWeek =
+      totalUpsells > 0 ? Math.max(0, Math.floor(totalUpsells / weeks)) : 0;
+
     for (let i = 0; i < weeks; i++) {
       // Create progressive improvement over time
       const weekProgress = (i + 1) / weeks;
       const variation = 0.7 + Math.random() * 0.6; // 30% variation
-      
+
       // For small numbers, ensure we show a clear progression
       let weekCalls, weekDeals, weekUpsells;
-      
+
       if (totalCalls <= 5) {
         // For very small call counts, show clear week-by-week progression
-        weekCalls = Math.max(0, Math.floor(weekProgress * totalCalls * variation));
-        weekDeals = Math.min(weekCalls, Math.floor(weekProgress * totalDeals * variation));
-        weekUpsells = Math.min(weekDeals, Math.floor(weekProgress * totalUpsells * variation));
+        weekCalls = Math.max(
+          0,
+          Math.floor(weekProgress * totalCalls * variation)
+        );
+        weekDeals = Math.min(
+          weekCalls,
+          Math.floor(weekProgress * totalDeals * variation)
+        );
+        weekUpsells = Math.min(
+          weekDeals,
+          Math.floor(weekProgress * totalUpsells * variation)
+        );
       } else {
         // For larger numbers, use the original logic
-        weekCalls = Math.floor(totalCalls * weekProgress * variation / 4);
-        weekDeals = Math.min(weekCalls, Math.floor(totalDeals * weekProgress * variation / 4));
-        weekUpsells = Math.min(weekDeals, Math.floor(totalUpsells * weekProgress * variation / 4));
+        weekCalls = Math.floor((totalCalls * weekProgress * variation) / 4);
+        weekDeals = Math.min(
+          weekCalls,
+          Math.floor((totalDeals * weekProgress * variation) / 4)
+        );
+        weekUpsells = Math.min(
+          weekDeals,
+          Math.floor((totalUpsells * weekProgress * variation) / 4)
+        );
       }
-      
+
       history.push({
         callsMade: Math.max(0, weekCalls),
         dealsClosed: Math.max(0, weekDeals),
         upsells: Math.max(0, weekUpsells),
-        period: `Week ${i + 1}`
+        period: `Week ${i + 1}`,
       });
     }
-    
+
     // Make sure we have some data to show even if user has no stats
     if (totalCalls === 0 && totalDeals === 0 && totalUpsells === 0) {
       // Generate sample progression for new users
@@ -296,57 +336,76 @@ export default function HomePage() {
           callsMade: progression,
           dealsClosed: Math.floor(progression / 3),
           upsells: Math.floor(progression / 5),
-          period: `Week ${i + 1}`
+          period: `Week ${i + 1}`,
         };
       }
     }
-    
+
     // Ensure the last few weeks show current stats for realism
     if (history.length > 0 && totalCalls > 0) {
       history[history.length - 1].callsMade = totalCalls;
       history[history.length - 1].dealsClosed = totalDeals;
       history[history.length - 1].upsells = totalUpsells;
     }
-    
+
     return history;
   };
 
   const generateMotivationalQuotes = (stats: any, level: number) => {
     if (!stats) return ["Keep up the great work!"];
-    
+
     const quotes = [];
     const callsToGoal = Math.max(0, 20 - stats.callsMade);
     const dealsToGoal = Math.max(0, 5 - stats.dealsClosed);
-    
+
     if (callsToGoal > 0) {
-      quotes.push(`You're only ${callsToGoal} calls away from reaching today's goal—keep going!`);
+      quotes.push(
+        `You're only ${callsToGoal} calls away from reaching today's goal—keep going!`
+      );
     } else {
-      quotes.push("Amazing! You've exceeded your daily call goal—great momentum!");
+      quotes.push(
+        "Amazing! You've exceeded your daily call goal—great momentum!"
+      );
     }
-    
+
     if (stats.dealsClosed > 0) {
-      quotes.push(`Excellent work! You've closed ${stats.dealsClosed} deals this week!`);
+      quotes.push(
+        `Excellent work! You've closed ${stats.dealsClosed} deals this week!`
+      );
     }
-    
+
     if (stats.totalScore > 0) {
-      quotes.push(`Your total score of ${stats.totalScore} shows real progress—keep building!`);
+      quotes.push(
+        `Your total score of ${stats.totalScore} shows real progress—keep building!`
+      );
     }
-    
+
     if (stats.upsells > 0) {
-      quotes.push(`Great upselling! You've achieved ${stats.upsells} upsells this week!`);
+      quotes.push(
+        `Great upselling! You've achieved ${stats.upsells} upsells this week!`
+      );
     }
-    
-    quotes.push(`You're currently level ${level}—each call brings you closer to the next level!`);
-    
+
+    quotes.push(
+      `You're currently level ${level}—each call brings you closer to the next level!`
+    );
+
     return quotes;
   };
 
   // Calculate progress percentages and level
-  const callsProgress = userStats ? Math.min((userStats.callsMade / 20) * 100, 100) : 0; // Goal: 20 calls
-  const dealsProgress = userStats ? Math.min((userStats.dealsClosed / 5) * 100, 100) : 0; // Goal: 5 deals
+  const callsProgress = userStats
+    ? Math.min((userStats.callsMade / 20) * 100, 100)
+    : 0; // Goal: 20 calls
+  const dealsProgress = userStats
+    ? Math.min((userStats.dealsClosed / 5) * 100, 100)
+    : 0; // Goal: 5 deals
   const currentLevel = userStats ? Math.floor(userStats.totalScore / 100) : 0; // 100 points per level
 
-  const motivationalQuotes = generateMotivationalQuotes(userStats, currentLevel);
+  const motivationalQuotes = generateMotivationalQuotes(
+    userStats,
+    currentLevel
+  );
 
   useEffect(() => {
     fetchUserStats();
@@ -356,24 +415,26 @@ export default function HomePage() {
 
   // Debug effect to log state changes
   useEffect(() => {
-    console.log('Recent calls state updated:', recentCalls);
+    console.log("Recent calls state updated:", recentCalls);
   }, [recentCalls]);
 
   useEffect(() => {
-    console.log('Feedback calls state updated:', feedbackCalls);
+    console.log("Feedback calls state updated:", feedbackCalls);
   }, [feedbackCalls]);
 
   const fetchUserStats = async () => {
     try {
-      const response = await api.get('/performance/leaderboard/me?period=alltime');
+      const response = await api.get(
+        "/performance/leaderboard/me?period=alltime"
+      );
       setUserStats(response.data.data);
       // Generate performance history based on current stats
       const history = generatePerformanceHistory(response.data.data);
-      console.log('Generated performance history:', history);
-      console.log('Current stats:', response.data.data);
+      console.log("Generated performance history:", history);
+      console.log("Current stats:", response.data.data);
       setPerformanceHistory(history);
     } catch (error) {
-      console.error('Failed to fetch user stats:', error);
+      console.error("Failed to fetch user stats:", error);
     } finally {
       setLoading(false);
     }
@@ -381,24 +442,24 @@ export default function HomePage() {
 
   const fetchLeaderboardData = async () => {
     try {
-      const response = await api.get('/performance/leaderboard?period=alltime');
+      const response = await api.get("/performance/leaderboard?period=alltime");
       setLeaderboardData(response.data.data?.slice(0, 3) || []); // Top 3
     } catch (error) {
-      console.error('Failed to fetch leaderboard:', error);
+      console.error("Failed to fetch leaderboard:", error);
     }
   };
 
   const fetchRecentCalls = async () => {
     setCallsLoading(true);
     try {
-      const response = await api.get('/call/my-calls');
-      console.log('Raw API response:', response.data);
+      const response = await api.get("/call/my-calls");
+      console.log("Raw API response:", response.data);
       // Get the 5 most recent calls - the calls are nested under data.calls
       const calls = response.data.data?.calls?.slice(0, 5) || [];
-      console.log('Extracted calls:', calls);
+      console.log("Extracted calls:", calls);
       setRecentCalls(calls);
     } catch (error) {
-      console.error('Failed to fetch recent calls:', error);
+      console.error("Failed to fetch recent calls:", error);
     } finally {
       setCallsLoading(false);
     }
@@ -406,15 +467,17 @@ export default function HomePage() {
 
   const fetchFeedbackCalls = async () => {
     try {
-      const response = await api.get('/call/my-calls');
-      console.log('Feedback calls API response:', response.data);
+      const response = await api.get("/call/my-calls");
+      console.log("Feedback calls API response:", response.data);
       // Filter calls that have been analyzed - the calls are nested under data.calls
       const allCalls = response.data.data?.calls || [];
-      const analyzedCalls = allCalls.filter((call: any) => call.status === 'analyzed');
-      console.log('Analyzed calls:', analyzedCalls);
+      const analyzedCalls = allCalls.filter(
+        (call: any) => call.status === "analyzed"
+      );
+      console.log("Analyzed calls:", analyzedCalls);
       setFeedbackCalls(analyzedCalls);
     } catch (error) {
-      console.error('Failed to fetch feedback calls:', error);
+      console.error("Failed to fetch feedback calls:", error);
     }
   };
 
@@ -456,7 +519,7 @@ export default function HomePage() {
               <div className="flex flex-col md:flex-row">
                 <div className="p-6 md:p-8 flex flex-col justify-center flex-1">
                   <h1 className="text-2xl lg:text-3xl font-bold mb-2">
-                    Hello, {user?.name || 'User'}!
+                    Hello, {user?.name || "User"}!
                   </h1>
                   <p className="text-slate-300 mb-4">
                     Welcome Back to Level up CRM
@@ -466,7 +529,12 @@ export default function HomePage() {
                       <Star className="w-5 h-5 text-blue-400" />
                     </div>
                     <span className="text-lg font-bold">
-                      Level {currentLevel}: {currentLevel >= 5 ? 'Sales Master' : currentLevel >= 3 ? 'Rising Star' : 'Rookie'}
+                      Level {currentLevel}:{" "}
+                      {currentLevel >= 5
+                        ? "Sales Master"
+                        : currentLevel >= 3
+                        ? "Rising Star"
+                        : "Rookie"}
                     </span>
                   </div>
                 </div>
@@ -493,27 +561,37 @@ export default function HomePage() {
                   text={`${userStats?.callsMade || 0}/20`}
                   textClassName="text-xl font-bold"
                 />
-                <p className="text-lime text-sm mt-3 font-medium">calls completed</p>
+                <p className="text-lime text-sm mt-3 font-medium">
+                  calls completed
+                </p>
               </div>
             </div>
           </div>
 
           {/* deals */}
           <div className="bg-gray-900 rounded-lg p-6 shadow-lg">
-            <h2 className="text-gray-400 uppercase tracking-wide font-bold mb-4 text-sm">PERFORMANCE OVERVIEW</h2>
+            <h2 className="text-gray-400 uppercase tracking-wide font-bold mb-4 text-sm">
+              PERFORMANCE OVERVIEW
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-400 mb-1">{userStats?.callsMade || 0}</div>
+                <div className="text-3xl font-bold text-blue-400 mb-1">
+                  {userStats?.callsMade || 0}
+                </div>
                 <div className="text-sm text-gray-400 mb-1">Total Calls</div>
                 <div className="text-lime font-semibold text-xs">All Time</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-400 mb-1">{userStats?.dealsClosed || 0}</div>
+                <div className="text-3xl font-bold text-green-400 mb-1">
+                  {userStats?.dealsClosed || 0}
+                </div>
                 <div className="text-sm text-gray-400 mb-1">Deals Closed</div>
                 <div className="h-1 mt-2 bg-green-600 rounded-full mx-auto w-16"></div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-purple-400 mb-1">{userStats?.upsells || 0}</div>
+                <div className="text-3xl font-bold text-purple-400 mb-1">
+                  {userStats?.upsells || 0}
+                </div>
                 <div className="text-sm text-gray-400 mb-1">Upsells</div>
                 <div className="h-1 mt-2 bg-purple-600 rounded-full mx-auto w-16"></div>
               </div>
@@ -521,12 +599,11 @@ export default function HomePage() {
             <div className="mt-6">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-400">Goal Progress</span>
-                <span className="text-sm text-lime font-semibold">{Math.round(dealsProgress)}%</span>
+                <span className="text-sm text-lime font-semibold">
+                  {Math.round(dealsProgress)}%
+                </span>
               </div>
-              <Progress
-                value={dealsProgress}
-                className="h-2 bg-gray-800"
-              />
+              <Progress value={dealsProgress} className="h-2 bg-gray-800" />
             </div>
           </div>
 
@@ -540,7 +617,7 @@ export default function HomePage() {
                 </Button>
               }
             />
-            <Button 
+            <Button
               onClick={openFeedbackModal}
               className="lime-button w-full py-3 text-base md:text-lg flex items-center justify-center"
             >
@@ -554,9 +631,9 @@ export default function HomePage() {
             <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">Recent Call Logs</h2>
-                <Button 
+                <Button
                   onClick={fetchRecentCalls}
-                  variant="outline" 
+                  variant="outline"
                   size="sm"
                   disabled={callsLoading}
                 >
@@ -577,47 +654,70 @@ export default function HomePage() {
                   <tbody>
                     {callsLoading ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-400">
+                        <td
+                          colSpan={5}
+                          className="py-8 text-center text-gray-400"
+                        >
                           <div className="animate-pulse">Loading calls...</div>
                         </td>
                       </tr>
                     ) : recentCalls.length > 0 ? (
                       recentCalls.map((call) => (
-                        <tr key={call._id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                        <tr
+                          key={call._id}
+                          className="border-b border-gray-700 hover:bg-gray-700/50"
+                        >
                           <td className="py-3 text-sm">
-                            {new Date(call.createdAt).toLocaleDateString()} {new Date(call.createdAt).toLocaleTimeString()}
+                            {new Date(call.createdAt).toLocaleDateString()}{" "}
+                            {new Date(call.createdAt).toLocaleTimeString()}
                           </td>
                           <td className="py-3 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              call.source === 'twilio-recording' ? 'bg-blue-900 text-blue-300' :
-                              'bg-purple-900 text-purple-300'
-                            }`}>
-                              {call.source === 'twilio-recording' ? 'Twilio' : 'Manual'}
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                call.source === "twilio-recording"
+                                  ? "bg-blue-900 text-blue-300"
+                                  : "bg-purple-900 text-purple-300"
+                              }`}
+                            >
+                              {call.source === "twilio-recording"
+                                ? "Twilio"
+                                : "Manual"}
                             </span>
                           </td>
                           <td className="py-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              call.status === 'analyzed' ? 'bg-green-900 text-green-300' :
-                              call.status === 'processing' ? 'bg-yellow-900 text-yellow-300' :
-                              call.status === 'failed' ? 'bg-red-900 text-red-300' :
-                              'bg-gray-900 text-gray-300'
-                            }`}>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                call.status === "analyzed"
+                                  ? "bg-green-900 text-green-300"
+                                  : call.status === "processing"
+                                  ? "bg-yellow-900 text-yellow-300"
+                                  : call.status === "failed"
+                                  ? "bg-red-900 text-red-300"
+                                  : "bg-gray-900 text-gray-300"
+                              }`}
+                            >
                               {call.status}
                             </span>
                           </td>
                           <td className="py-3 text-sm">
                             {call.score ? (
-                              <span className={`font-medium ${
-                                call.score >= 80 ? 'text-green-400' :
-                                call.score >= 60 ? 'text-yellow-400' :
-                                'text-red-400'
-                              }`}>
+                              <span
+                                className={`font-medium ${
+                                  call.score >= 80
+                                    ? "text-green-400"
+                                    : call.score >= 60
+                                    ? "text-yellow-400"
+                                    : "text-red-400"
+                                }`}
+                              >
                                 {call.score}/100
                               </span>
-                            ) : '-'}
+                            ) : (
+                              "-"
+                            )}
                           </td>
                           <td className="py-3">
-                            {call.status === 'analyzed' && (
+                            {call.status === "analyzed" && (
                               <Button
                                 onClick={() => viewCallFeedback(call)}
                                 variant="outline"
@@ -632,14 +732,21 @@ export default function HomePage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-12 text-center text-gray-400">
+                        <td
+                          colSpan={5}
+                          className="py-12 text-center text-gray-400"
+                        >
                           <div className="flex flex-col items-center gap-3">
                             <div className="p-4 bg-gray-700 rounded-full">
                               <Phone className="w-8 h-8 text-gray-400" />
                             </div>
                             <div>
-                              <p className="font-semibold text-lg mb-1">No calls yet</p>
-                              <p className="text-sm text-gray-500">Start making calls to see your logs here</p>
+                              <p className="font-semibold text-lg mb-1">
+                                No calls yet
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                Start making calls to see your logs here
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -653,12 +760,13 @@ export default function HomePage() {
         </div>
 
         {/* Call Screen - Keep existing implementation */}
-        {isCalling && (
+         {isCalling && (
           <CallScreen
             contactName={currentCallName}
             contactPhone={currentCallNumber}
             onEndCall={handleEndCall}
             isConnected={callConnected}
+            callStatus={callStatus}
           />
         )}
 
@@ -747,10 +855,11 @@ export default function HomePage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">
-                  Call from {new Date(selectedCall.createdAt).toLocaleDateString()}
+                  Call from{" "}
+                  {new Date(selectedCall.createdAt).toLocaleDateString()}
                 </h3>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setSelectedCall(null)}
                   size="sm"
                 >
@@ -764,12 +873,16 @@ export default function HomePage() {
                     <BarChart3 className="w-4 h-4 text-blue-400" />
                     <span className="text-sm font-medium">Overall Score</span>
                   </div>
-                  <div className={`text-2xl font-bold ${
-                    selectedCall.score >= 80 ? 'text-green-400' :
-                    selectedCall.score >= 60 ? 'text-yellow-400' :
-                    'text-red-400'
-                  }`}>
-                    {selectedCall.score || 'N/A'}/100
+                  <div
+                    className={`text-2xl font-bold ${
+                      selectedCall.score >= 80
+                        ? "text-green-400"
+                        : selectedCall.score >= 60
+                        ? "text-yellow-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {selectedCall.score || "N/A"}/100
                   </div>
                 </div>
 
@@ -778,12 +891,16 @@ export default function HomePage() {
                     <MessageSquareText className="w-4 h-4 text-purple-400" />
                     <span className="text-sm font-medium">Sentiment</span>
                   </div>
-                  <Badge variant={
-                    selectedCall.sentiment === 'positive' ? 'default' :
-                    selectedCall.sentiment === 'negative' ? 'destructive' :
-                    'secondary'
-                  }>
-                    {selectedCall.sentiment || 'neutral'}
+                  <Badge
+                    variant={
+                      selectedCall.sentiment === "positive"
+                        ? "default"
+                        : selectedCall.sentiment === "negative"
+                        ? "destructive"
+                        : "secondary"
+                    }
+                  >
+                    {selectedCall.sentiment || "neutral"}
                   </Badge>
                 </div>
 
@@ -793,9 +910,19 @@ export default function HomePage() {
                     <span className="text-sm font-medium">Results</span>
                   </div>
                   <div className="space-y-1">
-                    {selectedCall.dealClosed && <Badge className="bg-green-900 text-green-300">Deal Closed</Badge>}
-                    {selectedCall.upsell && <Badge className="bg-blue-900 text-blue-300">Upsell</Badge>}
-                    {!selectedCall.dealClosed && !selectedCall.upsell && <span className="text-gray-400 text-sm">No deal</span>}
+                    {selectedCall.dealClosed && (
+                      <Badge className="bg-green-900 text-green-300">
+                        Deal Closed
+                      </Badge>
+                    )}
+                    {selectedCall.upsell && (
+                      <Badge className="bg-blue-900 text-blue-300">
+                        Upsell
+                      </Badge>
+                    )}
+                    {!selectedCall.dealClosed && !selectedCall.upsell && (
+                      <span className="text-gray-400 text-sm">No deal</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -806,7 +933,9 @@ export default function HomePage() {
                     <FileText className="w-4 h-4" />
                     Call Summary
                   </h4>
-                  <p className="text-gray-300 text-sm leading-relaxed">{selectedCall.summary}</p>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {selectedCall.summary}
+                  </p>
                 </div>
               )}
 
@@ -816,7 +945,9 @@ export default function HomePage() {
                     <Brain className="w-4 h-4 text-blue-400" />
                     AI Feedback & Recommendations
                   </h4>
-                  <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{selectedCall.feedback}</p>
+                  <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                    {selectedCall.feedback}
+                  </p>
                 </div>
               )}
 
@@ -835,38 +966,53 @@ export default function HomePage() {
               {feedbackCalls.length > 0 ? (
                 <div className="space-y-3">
                   {feedbackCalls.map((call) => (
-                    <div 
-                      key={call._id} 
+                    <div
+                      key={call._id}
                       className="bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors"
                       onClick={() => setSelectedCall(call)}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
                           <span className="font-medium">
-                            {new Date(call.createdAt).toLocaleDateString()} at {new Date(call.createdAt).toLocaleTimeString()}
+                            {new Date(call.createdAt).toLocaleDateString()} at{" "}
+                            {new Date(call.createdAt).toLocaleTimeString()}
                           </span>
-                          <Badge variant={
-                            call.sentiment === 'positive' ? 'default' :
-                            call.sentiment === 'negative' ? 'destructive' :
-                            'secondary'
-                          }>
-                            {call.sentiment || 'neutral'}
+                          <Badge
+                            variant={
+                              call.sentiment === "positive"
+                                ? "default"
+                                : call.sentiment === "negative"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {call.sentiment || "neutral"}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          {call.dealClosed && <ThumbsUp className="w-4 h-4 text-green-400" />}
-                          {call.upsell && <Star className="w-4 h-4 text-yellow-400" />}
-                          <span className={`font-bold ${
-                            call.score >= 80 ? 'text-green-400' :
-                            call.score >= 60 ? 'text-yellow-400' :
-                            'text-red-400'
-                          }`}>
-                            {call.score || 'N/A'}/100
+                          {call.dealClosed && (
+                            <ThumbsUp className="w-4 h-4 text-green-400" />
+                          )}
+                          {call.upsell && (
+                            <Star className="w-4 h-4 text-yellow-400" />
+                          )}
+                          <span
+                            className={`font-bold ${
+                              call.score >= 80
+                                ? "text-green-400"
+                                : call.score >= 60
+                                ? "text-yellow-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {call.score || "N/A"}/100
                           </span>
                         </div>
                       </div>
                       {call.summary && (
-                        <p className="text-sm text-gray-400 line-clamp-2">{call.summary}</p>
+                        <p className="text-sm text-gray-400 line-clamp-2">
+                          {call.summary}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -874,9 +1020,12 @@ export default function HomePage() {
               ) : (
                 <div className="text-center py-12">
                   <Brain className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No AI Feedback Available</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    No AI Feedback Available
+                  </h3>
                   <p className="text-gray-400 mb-4">
-                    Start making calls to get AI-powered insights and feedback on your performance.
+                    Start making calls to get AI-powered insights and feedback
+                    on your performance.
                   </p>
                   <Button onClick={() => setShowFeedbackModal(false)}>
                     Start Calling

@@ -382,7 +382,21 @@ export default function DialerModal({ trigger }: DialerModalProps) {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
+    const rawValue = e.target.value;
+
+    // If the user pastes a number, handle it smartly
+    if (rawValue.length > phoneNumber.length + 1) { // A paste is likely to be longer
+        let digits = rawValue.replace(/\D/g, "");
+        if (digits.startsWith("92")) {
+            digits = digits.substring(2);
+        } else if (digits.startsWith("0")) {
+            digits = digits.substring(1);
+        }
+        setPhoneNumber(formatPhoneNumber(digits));
+        return;
+    }
+
+    const formatted = formatPhoneNumber(rawValue);
     setPhoneNumber(formatted);
   };
 
@@ -534,6 +548,14 @@ export default function DialerModal({ trigger }: DialerModalProps) {
                   callStatus === "Connected" || callStatus === "Calling..."
                 }
               />
+              {phoneNumber && (
+                <button
+                  onClick={() => setPhoneNumber("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
