@@ -121,7 +121,7 @@ export default function HomePage() {
             description: "Waiting for the other person to answer...",
           });
 
-          conn.on('accept', (connection) => {
+          conn.on('accept', (connection: any) => {
             console.log("✅ Call accepted! Connection:", connection);
             setCallConnected(true);
             setCallStatus("connected");
