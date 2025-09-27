@@ -65,11 +65,7 @@ export default function TrainingPage() {
                 <span className="text-sm">rapport building</span>
                 <span className="text-xs text-gray-400">Lv3 65%</span>
               </div>
-              <Progress
-                value={65}
-                className="h-1.5 bg-orange-900/30"
-                indicatorClassName="bg-orange-500"
-              />
+              <Progress value={65} className="h-1.5 bg-orange-900/30" />
             </div>
           </div>
 
@@ -79,22 +75,14 @@ export default function TrainingPage() {
                 <span className="text-sm">Call Opening Script</span>
                 <span className="text-xs text-gray-400">Lv3 25%</span>
               </div>
-              <Progress
-                value={25}
-                className="h-1.5 bg-yellow-900/30"
-                indicatorClassName="bg-yellow-500"
-              />
+              <Progress value={25} className="h-1.5 bg-yellow-900/30" />
             </div>
             <div>
               <div className="flex justify-between mb-1">
                 <span className="text-sm">In progress</span>
                 <span className="text-xs text-gray-400">Lv3 65%</span>
               </div>
-              <Progress
-                value={65}
-                className="h-1.5 bg-purple-900/30"
-                indicatorClassName="bg-purple-500"
-              />
+              <Progress value={65} className="h-1.5 bg-purple-900/30" />
             </div>
           </div>
         </div>

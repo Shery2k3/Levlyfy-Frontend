@@ -35,22 +35,28 @@ export function QuizModal({ onClose }: { onClose: () => void }) {
   const [score, setScore] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30); // 30 seconds per question
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!quizCompleted && timeLeft > 0 && selectedAnswer === null) {
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (timeLeft === 0 && selectedAnswer === null) {
       handleAnswerSelect(-1); // Auto-select wrong answer if time runs out
     }
 
-    return () => clearInterval(timerRef.current);
+    return () => {
+      if (timerRef.current !== null) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, [currentQuiz, timeLeft, selectedAnswer, quizCompleted]);
 
   const handleAnswerSelect = (index: number) => {
-    clearInterval(timerRef.current);
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current);
+    }
     setSelectedAnswer(index);
 
     // Check if answer is correct
@@ -99,7 +105,6 @@ export function QuizModal({ onClose }: { onClose: () => void }) {
               progress={progressWidth}
               size={120}
               strokeWidth={12}
-              timeLeft={timeLeft}
               text={`${currentQuiz + 1}`}
             />
           </div>
