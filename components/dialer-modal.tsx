@@ -549,14 +549,7 @@ export default function DialerModal({ trigger }: DialerModalProps) {
                   callStatus === "Connected" || callStatus === "Calling..."
                 }
               />
-              {phoneNumber && (
-                <button
-                  onClick={() => setPhoneNumber("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+              {/* Clear button removed as requested */}
             </div>
           </div>
 
