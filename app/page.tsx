@@ -80,7 +80,10 @@ export default function HomePage() {
   useEffect(() => {
     if (!lastIncoming) return;
     console.log("📞 Incoming call detected in page:", lastIncoming);
-    toast({ title: "Incoming Call", description: "Connecting your browser to the phone call..." });
+    toast({
+      title: "Incoming Call",
+      description: "Connecting your browser to the phone call...",
+    });
     try {
       acceptIncoming(lastIncoming);
       setIsCalling(true);
@@ -652,7 +655,7 @@ export default function HomePage() {
         </div>
 
         {/* Call Screen - Keep existing implementation */}
-         {isCalling && (
+        {isCalling && (
           <CallScreen
             contactName={currentCallName}
             contactPhone={currentCallNumber}

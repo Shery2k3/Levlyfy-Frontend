@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Device } from "@twilio/voice-sdk";
 import axiosInstance from "@/lib/api";
 
@@ -73,7 +79,7 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await axiosInstance.get("/twilio/token");
       const data = response.data;
-      const device = new Device(data.token, { logLevel: 0 });
+      const device = new Device(data.token);
       deviceRef.current = device;
 
       device.on("ready", () => {
@@ -87,9 +93,11 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Track last connect params so we can use them in the connect event
-      const lastConnectParamsRef = { current: null as Record<string, any> | null };
+      const lastConnectParamsRef = {
+        current: null as Record<string, any> | null,
+      };
 
-  device.on("connect", (connection: any) => {
+      device.on("connect", (connection: any) => {
         console.log("[TwilioProvider] connect", connection);
         setCurrentConnection(connection);
 
@@ -129,13 +137,24 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
 
         if (callSid) {
           try {
-            const numberCalled = lastConnectParamsRef.current?.To || lastConnectParamsRef.current?.to || null;
+            const numberCalled =
+              lastConnectParamsRef.current?.To ||
+              lastConnectParamsRef.current?.to ||
+              null;
             if (numberCalled) {
-              console.log("[TwilioProvider] Storing call metadata for:", numberCalled);
-              axiosInstance.post("/twilio/call-started", {
-                callSid: callSid,
-                phoneNumber: numberCalled,
-              }).then((res) => console.log("Call metadata stored" , res.data)).catch((e)=>console.warn("Failed to store call metadata:", e));
+              console.log(
+                "[TwilioProvider] Storing call metadata for:",
+                numberCalled
+              );
+              axiosInstance
+                .post("/twilio/call-started", {
+                  callSid: callSid,
+                  phoneNumber: numberCalled,
+                })
+                .then((res) => console.log("Call metadata stored", res.data))
+                .catch((e) =>
+                  console.warn("Failed to store call metadata:", e)
+                );
             }
           } catch (err) {
             console.error("Failed to store call metadata (provider):", err);
@@ -242,7 +261,9 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
     acceptIncoming,
   };
 
-  return <TwilioContext.Provider value={value}>{children}</TwilioContext.Provider>;
+  return (
+    <TwilioContext.Provider value={value}>{children}</TwilioContext.Provider>
+  );
 }
 
 export function useTwilio() {

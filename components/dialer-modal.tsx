@@ -301,15 +301,16 @@ export default function DialerModal({ trigger }: DialerModalProps) {
     const rawValue = e.target.value;
 
     // If the user pastes a number, handle it smartly
-    if (rawValue.length > phoneNumber.length + 1) { // A paste is likely to be longer
-        let digits = rawValue.replace(/\D/g, "");
-        if (digits.startsWith("92")) {
-            digits = digits.substring(2);
-        } else if (digits.startsWith("0")) {
-            digits = digits.substring(1);
-        }
-        setPhoneNumber(formatPhoneNumber(digits));
-        return;
+    if (rawValue.length > phoneNumber.length + 1) {
+      // A paste is likely to be longer
+      let digits = rawValue.replace(/\D/g, "");
+      if (digits.startsWith("92")) {
+        digits = digits.substring(2);
+      } else if (digits.startsWith("0")) {
+        digits = digits.substring(1);
+      }
+      setPhoneNumber(formatPhoneNumber(digits));
+      return;
     }
 
     const formatted = formatPhoneNumber(rawValue);
@@ -482,10 +483,18 @@ export default function DialerModal({ trigger }: DialerModalProps) {
           {callStatus === "Connected" && (
             <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-4">
               <div className="text-center">
-                <div className="text-sm text-green-400 mb-1">📞 Call Active</div>
-                <div className="text-xs text-green-600">Connected to {selectedCountry} {phoneNumber}</div>
-                <div className="text-xs text-green-500 mt-1">Use the controls below to manage your call</div>
-                <div className="mt-2 text-sm text-green-300">Duration: {formatDuration(callDuration)}</div>
+                <div className="text-sm text-green-400 mb-1">
+                  📞 Call Active
+                </div>
+                <div className="text-xs text-green-600">
+                  Connected to {selectedCountry} {phoneNumber}
+                </div>
+                <div className="text-xs text-green-500 mt-1">
+                  Use the controls below to manage your call
+                </div>
+                <div className="mt-2 text-sm text-green-300">
+                  Duration: {formatDuration(callDuration)}
+                </div>
               </div>
             </div>
           )}
