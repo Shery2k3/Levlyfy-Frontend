@@ -75,19 +75,23 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
   // Lazy init - safe to call multiple times
   const init = async () => {
     if (deviceRef.current) return; // already initialized
+    console.log("[TwilioProvider] init() called");
     setInitStatus("initializing");
     try {
       const response = await axiosInstance.get("/twilio/token");
       const data = response.data;
+      console.log("[TwilioProvider] token response:", data);
       const device = new Device(data.token);
+      console.log("[TwilioProvider] Device constructed");
       deviceRef.current = device;
 
       device.on("ready", () => {
+        console.log("[TwilioProvider] device ready");
         setInitStatus("ready");
       });
 
       device.on("error", (err) => {
-        console.error("Twilio Device Error (provider):", err);
+        console.error("[TwilioProvider] Twilio Device Error:", err);
         setLastError(err);
         setInitStatus("error");
       });
@@ -98,7 +102,10 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
       };
 
       device.on("connect", (connection: any) => {
-        console.log("[TwilioProvider] connect", connection);
+        console.log("[TwilioProvider] connect event", {
+          connection,
+          params: connection?.parameters,
+        });
         setCurrentConnection(connection);
 
         const rawStatus =
@@ -117,15 +124,20 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
         // wire a few connection-level handlers
         try {
           connection.on?.("accept", () => {
+            console.log("[TwilioProvider] connection accepted");
             startCallTimer();
           });
           connection.on?.("disconnect", () => {
+            console.log("[TwilioProvider] connection disconnected");
             stopCallTimer();
             setCurrentConnection(null);
             setIsMuted(false);
           });
+          connection.on?.("error", (err: any) => {
+            console.warn("[TwilioProvider] connection error:", err);
+          });
         } catch (e) {
-          console.debug("Connection event wiring not supported:", e);
+          console.debug("[TwilioProvider] Connection event wiring not supported:", e);
         }
 
         // Persist call metadata server-side if we have params and a CallSid
@@ -141,23 +153,18 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
               lastConnectParamsRef.current?.To ||
               lastConnectParamsRef.current?.to ||
               null;
+            console.log("[TwilioProvider] callSid detected:", callSid, "to:", numberCalled);
             if (numberCalled) {
-              console.log(
-                "[TwilioProvider] Storing call metadata for:",
-                numberCalled
-              );
               axiosInstance
                 .post("/twilio/call-started", {
                   callSid: callSid,
                   phoneNumber: numberCalled,
                 })
-                .then((res) => console.log("Call metadata stored", res.data))
-                .catch((e) =>
-                  console.warn("Failed to store call metadata:", e)
-                );
+                .then((res) => console.log("[TwilioProvider] Call metadata stored", res.data))
+                .catch((e) => console.warn("[TwilioProvider] Failed to store call metadata:", e));
             }
           } catch (err) {
-            console.error("Failed to store call metadata (provider):", err);
+            console.error("[TwilioProvider] Failed to store call metadata:", err);
           }
         }
       });
@@ -176,6 +183,7 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
       });
 
       device.on("disconnect", () => {
+        console.log("[TwilioProvider] device disconnect event");
         stopCallTimer();
         setCurrentConnection(null);
         setIsMuted(false);
@@ -184,13 +192,15 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
       // register device - best-effort
       try {
         await device.register();
+        console.log("[TwilioProvider] device register attempted");
       } catch (e) {
-        console.warn("Twilio device register failed (provider):", e);
+        console.warn("[TwilioProvider] Twilio device register failed:", e);
       }
 
+      console.log("[TwilioProvider] init successful, provider ready");
       setInitStatus("ready");
     } catch (err) {
-      console.error("Twilio init failed:", err);
+      console.error("[TwilioProvider] Twilio init failed:", err);
       setLastError(err);
       setInitStatus("error");
     }
@@ -202,15 +212,30 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
   const connect = (params: Record<string, any>) => {
     const device = deviceRef.current;
     if (!device) {
-      console.warn("connect() called before device init");
+      console.warn("[TwilioProvider] connect() called before device init");
       return null;
     }
     try {
       lastConnectParamsRef.current = params;
-      const c = device.connect({ params });
-      return c as any;
+      console.log("[TwilioProvider] connect() params:", params);
+      const cPromise = device.connect({ params });
+      // device.connect may return a Promise that resolves to the connection
+      if (cPromise && typeof (cPromise as any).then === "function") {
+        (cPromise as any)
+          .then((conn: any) => {
+            try {
+              conn?.on?.("accept", () => console.log("[TwilioProvider] connection.accept fired"));
+              conn?.on?.("disconnect", () => console.log("[TwilioProvider] connection.disconnect fired"));
+              conn?.on?.("error", (e: any) => console.warn("[TwilioProvider] connection.error:", e));
+            } catch (e) {
+              // ignore wiring failures
+            }
+          })
+          .catch((e: any) => console.warn("[TwilioProvider] connection promise rejected:", e));
+      }
+      return cPromise as any;
     } catch (e) {
-      console.error("Device.connect failed:", e);
+      console.error("[TwilioProvider] Device.connect failed:", e);
       return null;
     }
   };
@@ -219,9 +244,10 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
     const device = deviceRef.current;
     if (device) {
       try {
+        console.log("[TwilioProvider] disconnectAll()");
         device.disconnectAll();
       } catch (e) {
-        console.warn("disconnectAll failed:", e);
+        console.warn("[TwilioProvider] disconnectAll failed:", e);
       }
     }
   };
@@ -229,20 +255,22 @@ export function TwilioProvider({ children }: { children: React.ReactNode }) {
   const mute = (connection: any | null, shouldMute: boolean) => {
     if (!connection) return;
     try {
+      console.log("[TwilioProvider] mute()", { shouldMute });
       connection.mute(shouldMute);
       setIsMuted(shouldMute);
     } catch (e) {
-      console.warn("mute failed:", e);
+      console.warn("[TwilioProvider] mute failed:", e);
     }
   };
 
   const acceptIncoming = (incoming: any) => {
     try {
+      console.log("[TwilioProvider] acceptIncoming()", incoming);
       incoming?.accept?.();
       // also set as current connection
       setCurrentConnection(incoming);
     } catch (e) {
-      console.warn("acceptIncoming failed:", e);
+      console.warn("[TwilioProvider] acceptIncoming failed:", e);
     }
   };
 

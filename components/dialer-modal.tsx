@@ -207,7 +207,9 @@ export default function DialerModal({ trigger }: DialerModalProps) {
       (async () => {
         try {
           setIsLoading(true);
+          console.log("[DialerModal] calling initTwilio()");
           await initTwilio();
+          console.log("[DialerModal] initTwilio() resolved, initStatus:", initStatus);
         } catch (e) {
           console.error("Failed to init Twilio:", e);
         } finally {
@@ -228,7 +230,27 @@ export default function DialerModal({ trigger }: DialerModalProps) {
 
   // Keep provider connection in sync with local conn state
   useEffect(() => {
+    console.log("[DialerModal] currentConnection changed:", currentConnection);
     setConn(currentConnection);
+    if (currentConnection) {
+      setCallStatus("Connected");
+      // start local timer if provider doesn't already track it
+      if (callTimerRef.current === null) {
+        callTimerRef.current = window.setInterval(() => {
+          setCallDuration((p) => p + 1);
+        }, 1000) as unknown as number;
+      }
+    } else {
+      // clear local timer
+      if (callTimerRef.current !== null) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+      // if we were calling, move to Ready state
+      if (callStatus === "Calling...") {
+        setCallStatus("Ready");
+      }
+    }
   }, [currentConnection]);
 
   // Sync call duration from provider
@@ -260,7 +282,12 @@ export default function DialerModal({ trigger }: DialerModalProps) {
 
     console.log(`Attempting to call ${params.To}...`);
     setCallStatus("Calling...");
-    providerConnect(params);
+    try {
+      const result = providerConnect(params);
+      console.log("[DialerModal] providerConnect returned:", result);
+    } catch (e) {
+      console.error("[DialerModal] providerConnect threw:", e);
+    }
   };
 
   const handleHangup = () => {

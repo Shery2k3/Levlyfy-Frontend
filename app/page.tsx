@@ -33,7 +33,6 @@ import CallScreen from "@/components/call-screen";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { useTwilio } from "@/context/TwilioContext";
 
 export default function HomePage() {
   const [isCalling, setIsCalling] = useState(false);
@@ -50,7 +49,6 @@ export default function HomePage() {
   const [feedbackCalls, setFeedbackCalls] = useState<any[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
-  const [twilioDevice, setTwilioDevice] = useState<any>(null);
   // Missing call state variables (fixes TS2304 errors)
   const [callConnected, setCallConnected] = useState<boolean>(false);
   const [currentCallNumber, setCurrentCallNumber] = useState<string>("");
@@ -58,59 +56,12 @@ export default function HomePage() {
   const [callStatus, setCallStatus] = useState<
     "idle" | "calling" | "ringing" | "connected" | "disconnected"
   >("idle");
-
-  const {
-    deviceRef: providerDeviceRef,
-    initStatus: providerInitStatus,
-    lastError: providerLastError,
-    lastIncoming,
-    acceptIncoming,
-    init: providerInit,
-  } = useTwilio();
-
-  useEffect(() => {
-    if (user) {
-      providerInit().catch((e) => {
-        console.error("Twilio provider init failed:", e);
-      });
-    }
-  }, [user, providerInit]);
-
-  // React to incoming calls from provider
-  useEffect(() => {
-    if (!lastIncoming) return;
-    console.log("📞 Incoming call detected in page:", lastIncoming);
-    toast({
-      title: "Incoming Call",
-      description: "Connecting your browser to the phone call...",
-    });
-    try {
-      acceptIncoming(lastIncoming);
-      setIsCalling(true);
-      setCallConnected(true);
-      const from = lastIncoming?.parameters?.From || "";
-      setCurrentCallNumber(from);
-      setCurrentCallName("Incoming");
-      toast({ title: "Connected", description: "Incoming call accepted" });
-    } catch (e) {
-      console.error("Failed to accept incoming call:", e);
-    }
-  }, [lastIncoming, acceptIncoming, toast]);
+  // Twilio is now initialized and handled by DialerModal/TwilioProvider
 
   const handleCall = async (numberToCall?: string, contactName?: string) => {
     console.log("🚀 HANDLE CALL CLICKED!");
-    console.log("📱 Twilio Device Status:", twilioDevice?.status());
-    console.log("📱 Device Ready?", twilioDevice ? "YES" : "NO");
 
-    if (!twilioDevice) {
-      console.error("❌ Twilio device not ready!");
-      toast({
-        title: "Error",
-        description: "Twilio device not ready.",
-        variant: "destructive",
-      });
-      return;
-    }
+    console.log("� HANDLE CALL CLICKED! (page) - delegating to call-start API");
 
     // Use the provided number or fallback to the hardcoded one
     const phoneNumber = numberToCall || "+923142113157";
@@ -146,13 +97,11 @@ export default function HomePage() {
   };
 
   const handleEndCall = () => {
-    if (twilioDevice) {
-      twilioDevice.disconnectAll();
-    }
     setIsCalling(false);
     setCallConnected(false);
     setCurrentCallNumber("");
     setCurrentCallName("");
+    // Twilio disconnect is handled by the Dialer Modal / TwilioProvider
   };
 
   const openDialer = () => {
