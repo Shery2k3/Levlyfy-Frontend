@@ -12,7 +12,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import ProgressRing from "@/components/progress-ring";
 import PerformanceChart from "@/components/performance-chart";
 import DialerModal from "@/components/dialer-modal";
@@ -31,10 +30,10 @@ import {
 import TeamHighlights from "@/components/team-highlights";
 import LeaderboardHighlights from "@/components/leaderboard-highlights";
 import CallScreen from "@/components/call-screen";
-import ModernDialer from "@/components/modern-dialer";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useTwilio } from "@/context/TwilioContext";
 
 export default function HomePage() {
   const [isCalling, setIsCalling] = useState(false);
@@ -60,144 +59,40 @@ export default function HomePage() {
     "idle" | "calling" | "ringing" | "connected" | "disconnected"
   >("idle");
 
+  const {
+    deviceRef: providerDeviceRef,
+    initStatus: providerInitStatus,
+    lastError: providerLastError,
+    lastIncoming,
+    acceptIncoming,
+    init: providerInit,
+  } = useTwilio();
+
   useEffect(() => {
-    const setupTwilio = async () => {
-      // Only run on client side
-      if (typeof window === "undefined") {
-        return;
-      }
-
-      try {
-        console.log("🎫 Requesting microphone permission...");
-        // Request microphone permission first
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log("✅ Microphone permission granted!");
-
-        console.log("🎫 Fetching Twilio token...");
-        const response = await api.get("/twillio/token");
-        const { token } = response.data;
-        console.log("✅ Token received! Length:", token.length);
-
-        console.log("📱 Setting up Twilio Device with token");
-
-        // Dynamically import Twilio Device to avoid SSR issues
-        const { Device } = await import("twilio-client");
-        const device = new Device();
-        console.log("📱 Device instance created, setting up...");
-
-        device.setup(token, {
-          codecPreferences: ["pcmu", "opus"] as any,
-          fakeLocalDTMF: true,
-          enableRingingState: true,
-        });
-
-        device.on("ready", () => {
-          console.log("✅ Twilio Device Ready! Status:", device.status());
-          setTwilioDevice(device);
-          toast({
-            title: "Device Ready",
-            description: "Twilio device is ready for calls",
-          });
-        });
-
-        device.on("error", (error) => {
-          console.error("❌ Twilio Device Error:", error);
-          console.error("❌ Error Details:", {
-            message: error.message,
-            code: error.code,
-          });
-          toast({
-            title: "Device Error",
-            description: `Twilio device error: ${error.message}`,
-            variant: "destructive",
-          });
-        });
-
-        device.on("connect", (conn) => {
-          console.log("🔗 Call initiated! Waiting for answer. Connection details:", conn);
-          setCallStatus("ringing");
-          toast({
-            title: "Ringing",
-            description: "Waiting for the other person to answer...",
-          });
-
-          conn.on('accept', (connection: any) => {
-            console.log("✅ Call accepted! Connection:", connection);
-            setCallConnected(true);
-            setCallStatus("connected");
-            toast({
-                title: "Connected",
-                description: "You can now speak!",
-            });
-          });
-        });
-
-        device.on("disconnect", (conn) => {
-          console.log("📞 Call disconnected. Connection:", conn);
-          setIsCalling(false);
-          setCallConnected(false);
-          setCurrentCallNumber("");
-          setCurrentCallName("");
-          setCallStatus("disconnected");
-          toast({
-            title: "Call Ended",
-            description: "The call has been disconnected.",
-          });
-        });
-
-        device.on("incoming", (conn) => {
-          console.log("📞 🔥 INCOMING CALL FROM TWILIO! This is what we want!");
-          console.log("📞 Connection object:", conn);
-          console.log("📞 Connection parameters:", conn.parameters);
-          console.log("📞 From:", conn.parameters?.From);
-          console.log("📞 To:", conn.parameters?.To);
-
-          toast({
-            title: "Incoming Call",
-            description: "Connecting your browser to the phone call...",
-          });
-
-          console.log("📞 Accepting incoming connection...");
-          // Auto-accept the incoming connection from your backend
-          conn.accept();
-          console.log(
-            "✅ Connection accepted! You should be able to speak now!"
-          );
-        });
-
-        device.on("cancel", () => {
-          console.log("📞 Call was cancelled");
-        });
-
-        device.on("presence", (presenceEvent) => {
-          console.log("👥 Presence event:", presenceEvent);
-        });
-      } catch (error) {
-        console.error("❌ Error setting up Twilio:", error);
-        console.error("❌ Full error object:", error);
-        toast({
-          title: "Setup Error",
-          description: "Failed to set up Twilio. Check console for details.",
-          variant: "destructive",
-        });
-      }
-    };
-
     if (user) {
-      console.log("👤 User authenticated, setting up Twilio...");
-      setupTwilio();
-    } else {
-      console.log("❌ No user authenticated yet");
+      providerInit().catch((e) => {
+        console.error("Twilio provider init failed:", e);
+      });
     }
+  }, [user, providerInit]);
 
-    return () => {
-      if (twilioDevice && typeof window !== "undefined") {
-        console.log("🧹 Cleaning up Twilio device");
-        twilioDevice.destroy();
-        setTwilioDevice(null);
-      }
-    };
-  }, [user, toast]);
+  // React to incoming calls from provider
+  useEffect(() => {
+    if (!lastIncoming) return;
+    console.log("📞 Incoming call detected in page:", lastIncoming);
+    toast({ title: "Incoming Call", description: "Connecting your browser to the phone call..." });
+    try {
+      acceptIncoming(lastIncoming);
+      setIsCalling(true);
+      setCallConnected(true);
+      const from = lastIncoming?.parameters?.From || "";
+      setCurrentCallNumber(from);
+      setCurrentCallName("Incoming");
+      toast({ title: "Connected", description: "Incoming call accepted" });
+    } catch (e) {
+      console.error("Failed to accept incoming call:", e);
+    }
+  }, [lastIncoming, acceptIncoming, toast]);
 
   const handleCall = async (numberToCall?: string, contactName?: string) => {
     console.log("🚀 HANDLE CALL CLICKED!");
@@ -236,9 +131,6 @@ export default function HomePage() {
       });
 
       console.log("📞 Call initiated! Now waiting for incoming connection...");
-      console.log(
-        "📞 Expected flow: Phone rings → You answer → Press key → Browser receives 'incoming' event"
-      );
     } catch (error: any) {
       console.error("❌ Error starting call:", error);
       console.error("❌ Error response:", error.response?.data);

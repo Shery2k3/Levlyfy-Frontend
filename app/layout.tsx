@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
 import NavigationWrapper from "@/components/navigation-wrapper";
 import { AuthProvider } from "@/context/AuthContext";
+import { TwilioProvider } from "@/context/TwilioContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,14 +23,16 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${inter.className} bg-black`}>
         <AuthProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            disableTransitionOnChange
-          >
-            <NavigationWrapper>{children}</NavigationWrapper>
-          </ThemeProvider>
+          <TwilioProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem={false}
+              disableTransitionOnChange
+            >
+              <NavigationWrapper>{children}</NavigationWrapper>
+            </ThemeProvider>
+          </TwilioProvider>
         </AuthProvider>
       </body>
     </html>

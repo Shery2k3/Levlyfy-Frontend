@@ -3,8 +3,8 @@
 import type React from "react";
 
 import { useState, useEffect, useRef } from "react";
-import { Device } from "@twilio/voice-sdk";
 import axiosInstance from "@/lib/api";
+import { useTwilio } from "@/context/TwilioContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -149,10 +149,24 @@ export default function DialerModal({ trigger }: DialerModalProps) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  // Twilio states
-  const twilioDeviceRef = useRef<Device | null>(null);
+  // Twilio states (centralized)
+  const {
+    deviceRef,
+    initStatus,
+    lastError,
+    currentConnection,
+    callDuration: providerCallDuration,
+    isMuted: providerIsMuted,
+    init: initTwilio,
+    connect: providerConnect,
+    disconnectAll: providerDisconnectAll,
+    mute: providerMute,
+  } = useTwilio();
+
   const [callStatus, setCallStatus] = useState("Initializing");
   const [conn, setConn] = useState<any>(null);
+  const [callDuration, setCallDuration] = useState<number>(0);
+  const callTimerRef = useRef<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
@@ -161,6 +175,12 @@ export default function DialerModal({ trigger }: DialerModalProps) {
     setConn(null);
     setIsMuted(false);
     setCallStatus("Ready");
+    // clear call timer
+    if (callTimerRef.current !== null) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+    setCallDuration(0);
   };
 
   // Reset modal state
@@ -183,146 +203,46 @@ export default function DialerModal({ trigger }: DialerModalProps) {
     setIsOpen(open);
     if (open) {
       resetCallState(); // Reset call state when opening modal
+      // Lazy initialize Twilio device when modal opens
+      (async () => {
+        try {
+          setIsLoading(true);
+          await initTwilio();
+        } catch (e) {
+          console.error("Failed to init Twilio:", e);
+        } finally {
+          setIsLoading(false);
+        }
+      })();
     }
   };
 
-  // Fetch token and initialize Twilio Device
+  // The provider handles init, events and cleanup. We map provider state to UI state.
   useEffect(() => {
-    if (!isOpen || twilioDeviceRef.current) {
-      return;
-    }
+    // Map provider initStatus to our callStatus
+    if (initStatus === "initializing") setCallStatus("Connecting to Twilio...");
+    else if (initStatus === "ready") setCallStatus("Ready");
+    else if (initStatus === "error") setCallStatus("Error");
+    else if (initStatus === "idle") setCallStatus("Initializing");
+  }, [initStatus]);
 
-    const setupTwilioDevice = async () => {
-      try {
-        setIsLoading(true);
-        setCallStatus("Connecting to Twilio...");
-
-        const response = await axiosInstance.get("/twilio/token");
-        console.log("Received Twilio token:", response.data);
-        const data = response.data;
-
-        const device = new Device(data.token, {
-          logLevel: 1,
-        });
-
-        twilioDeviceRef.current = device;
-
-        // Set up event listeners BEFORE registering
-        device.on("ready", () => {
-          console.log("Twilio Device is ready.");
-          setCallStatus("Ready");
-          setIsLoading(false);
-        });
-
-        device.on("error", (error) => {
-          console.error("Twilio Device Error:", error);
-          setCallStatus("Error");
-          setIsLoading(false);
-        });
-
-        device.on("connect", async (connection) => {
-          console.log("Successfully established call!");
-          console.log("Connection object:", connection);
-          console.log("Connection parameters:", connection.parameters);
-
-          setCallStatus("Connected");
-          setConn(connection);
-
-          // Get CallSid from connection - try multiple possible locations
-          const callSid =
-            connection.parameters?.CallSid ||
-            connection.parameters?.callSid ||
-            connection.outgoingConnectionId ||
-            connection.parameters?.["Call-SID"];
-
-          console.log("Extracted CallSid:", callSid);
-
-          if (callSid) {
-            try {
-              console.log("🔄 Storing call metadata...");
-              const numberCalled = `${selectedCountry}${phoneNumber.replace(
-                /\D/g,
-                ""
-              )}`;
-              const response = await axiosInstance.post(
-                "/twilio/call-started",
-                {
-                  callSid: callSid,
-                  phoneNumber: numberCalled,
-                }
-              );
-              console.log(
-                "✅ Call metadata stored successfully:",
-                response.data
-              );
-            } catch (error) {
-              console.error("❌ Failed to store call metadata:", error);
-            }
-          } else {
-            console.error("❌ Could not extract CallSid from connection");
-            console.error(
-              "Available connection properties:",
-              Object.keys(connection)
-            );
-            console.error(
-              "Available parameters:",
-              Object.keys(connection.parameters || {})
-            );
-          }
-        });
-
-        device.on("disconnect", () => {
-          console.log("Call disconnected.");
-          resetCallState(); // Use the proper reset function
-        });
-
-        device.on("registered", () => {
-          console.log("Device registered successfully");
-          setCallStatus("Ready");
-          setIsLoading(false);
-        });
-
-        device.on("unregistered", () => {
-          console.log("Device unregistered");
-          setCallStatus("Offline");
-        });
-
-        // Register the device
-        await device.register();
-
-        setTimeout(() => {
-          if (
-            callStatus === "Connecting to Twilio..." &&
-            device.state === "registered"
-          ) {
-            console.log("Device ready timeout - setting status manually");
-            setCallStatus("Ready");
-            setIsLoading(false);
-          }
-        }, 3000);
-      } catch (error) {
-        console.error("Error setting up Twilio Device:", error);
-        setCallStatus("Error");
-        setIsLoading(false);
-      }
-    };
-
-    setupTwilioDevice();
-  }, [isOpen]);
-
-  // Clean up on unmount
+  // Keep provider connection in sync with local conn state
   useEffect(() => {
-    return () => {
-      if (twilioDeviceRef.current) {
-        twilioDeviceRef.current.destroy();
-        twilioDeviceRef.current = null;
-      }
-    };
-  }, []);
+    setConn(currentConnection);
+  }, [currentConnection]);
+
+  // Sync call duration from provider
+  useEffect(() => {
+    setCallDuration(providerCallDuration);
+  }, [providerCallDuration]);
+
+  // Sync mute state
+  useEffect(() => {
+    setIsMuted(providerIsMuted);
+  }, [providerIsMuted]);
 
   const handleCall = () => {
-    const device = twilioDeviceRef.current;
-    if (!device) {
+    if (!deviceRef.current) {
       alert("Twilio Device not initialized.");
       return;
     }
@@ -340,28 +260,17 @@ export default function DialerModal({ trigger }: DialerModalProps) {
 
     console.log(`Attempting to call ${params.To}...`);
     setCallStatus("Calling...");
-    device.connect({ params });
+    providerConnect(params);
   };
 
   const handleHangup = () => {
-    const device = twilioDeviceRef.current;
-    if (device) {
-      device.disconnectAll();
-    }
+    providerDisconnectAll();
     // Don't close modal, just reset call state - the disconnect event will handle the reset
   };
 
   const handleMute = () => {
     if (conn) {
-      if (isMuted) {
-        conn.mute(false);
-        setIsMuted(false);
-        console.log("Call unmuted");
-      } else {
-        conn.mute(true);
-        setIsMuted(true);
-        console.log("Call muted");
-      }
+      providerMute(conn, !isMuted);
     }
   };
 
@@ -380,6 +289,12 @@ export default function DialerModal({ trigger }: DialerModalProps) {
         10
       )}`;
     }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -567,15 +482,10 @@ export default function DialerModal({ trigger }: DialerModalProps) {
           {callStatus === "Connected" && (
             <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-4">
               <div className="text-center">
-                <div className="text-sm text-green-400 mb-1">
-                  📞 Call Active
-                </div>
-                <div className="text-xs text-green-600">
-                  Connected to {selectedCountry} {phoneNumber}
-                </div>
-                <div className="text-xs text-green-500 mt-1">
-                  Use the controls below to manage your call
-                </div>
+                <div className="text-sm text-green-400 mb-1">📞 Call Active</div>
+                <div className="text-xs text-green-600">Connected to {selectedCountry} {phoneNumber}</div>
+                <div className="text-xs text-green-500 mt-1">Use the controls below to manage your call</div>
+                <div className="mt-2 text-sm text-green-300">Duration: {formatDuration(callDuration)}</div>
               </div>
             </div>
           )}
