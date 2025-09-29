@@ -13,7 +13,7 @@ import axiosInstance from "@/lib/api";
 type InitStatus = "idle" | "initializing" | "ready" | "error";
 
 type TwilioContextValue = {
-  deviceRef: React.MutableRefObject<Device | null>;
+  deviceRef: React.RefObject<Device | null>;
   initStatus: InitStatus;
   lastError: any;
   currentConnection: any | null;
