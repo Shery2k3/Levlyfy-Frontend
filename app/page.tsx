@@ -101,6 +101,8 @@ export default function HomePage() {
     setCallConnected(false);
     setCurrentCallNumber("");
     setCurrentCallName("");
+    // Close dialer modal when hang up is pressed
+    setIsDialerOpen(false);
     // Twilio disconnect is handled by the Dialer Modal / TwilioProvider
   };
 
@@ -460,6 +462,8 @@ export default function HomePage() {
                   Call Customer
                 </Button>
               }
+              open={isDialerOpen}
+              onOpenChange={setIsDialerOpen}
             />
             <Button
               onClick={openFeedbackModal}

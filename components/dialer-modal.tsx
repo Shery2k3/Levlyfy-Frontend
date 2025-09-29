@@ -142,12 +142,25 @@ const getFlagEmoji = (iso: string) => {
 
 interface DialerModalProps {
   trigger?: React.ReactNode;
+  // allow parent to control modal open state
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export default function DialerModal({ trigger }: DialerModalProps) {
+export default function DialerModal({ trigger, open, onOpenChange }: DialerModalProps) {
   const [selectedCountry, setSelectedCountry] = useState("+92");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  // If parent supplies controlled props, use them; otherwise fall back to internal state
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = typeof open === "boolean" && typeof onOpenChange === "function";
+  const isOpen = isControlled ? (open as boolean) : internalOpen;
+  const setIsOpen = (val: boolean) => {
+    if (isControlled) {
+      (onOpenChange as (open: boolean) => void)(val);
+    } else {
+      setInternalOpen(val);
+    }
+  };
 
   // Twilio states (centralized)
   const {
@@ -192,7 +205,30 @@ export default function DialerModal({ trigger }: DialerModalProps) {
 
   // Close modal gracefully
   const closeModal = () => {
-    setIsOpen(false);
+    console.debug("[DialerModal] closeModal() called - will attempt to close (controlled?", isControlled, ")");
+    // If parent provided onOpenChange, call it directly (defensive)
+    try {
+      if (isControlled && typeof onOpenChange === "function") {
+        onOpenChange(false);
+      } else {
+        setInternalOpen(false);
+      }
+    } catch (e) {
+      // fallback to internal setter
+      try {
+        setInternalOpen(false);
+      } catch (ee) {
+        /* ignore */
+      }
+    }
+
+    // Also call the unified setter to keep behavior consistent
+    try {
+      setIsOpen(false);
+    } catch (e) {
+      /* ignore */
+    }
+
     setTimeout(() => {
       resetModalState();
     }, 300); // Wait for modal animation to complete
@@ -200,6 +236,7 @@ export default function DialerModal({ trigger }: DialerModalProps) {
 
   // Reset when modal opens to ensure clean state
   const handleModalOpen = (open: boolean) => {
+    console.debug("[DialerModal] handleModalOpen() called with:", open);
     setIsOpen(open);
     if (open) {
       resetCallState(); // Reset call state when opening modal
@@ -292,7 +329,22 @@ export default function DialerModal({ trigger }: DialerModalProps) {
 
   const handleHangup = () => {
     providerDisconnectAll();
-    // Don't close modal, just reset call state - the disconnect event will handle the reset
+    // Disconnect provider connections and close the modal
+    // The provider will emit disconnect events which reset call state; we also close the UI here
+    try {
+      console.debug("[DialerModal] handleHangup() - disconnecting and closing modal");
+      // call closeModal (which will call parent setter) and also defensively ensure parent is closed
+      closeModal();
+      if (isControlled && typeof onOpenChange === "function") {
+        try {
+          onOpenChange(false);
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    } catch (e) {
+      // ignore - best-effort
+    }
   };
 
   const handleMute = () => {
