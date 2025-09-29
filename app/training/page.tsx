@@ -151,7 +151,7 @@ export default function TrainingPage() {
             </div>
             <Button
               className="lime-button w-full"
-              onClick={() => setShowQuizModal(true)}
+              // onClick={() => setShowQuizModal(true)}
             >
               Start Training
             </Button>
