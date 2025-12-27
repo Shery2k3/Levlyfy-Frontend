@@ -27,7 +27,7 @@ interface UserStats {
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState("calls-made");
-  const [timePeriod, setTimePeriod] = useState("weekly");
+  const [timePeriod, setTimePeriod] = useState("alltime");
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,13 +61,28 @@ export default function LeaderboardPage() {
     }
   };
 
+  // Frontend rank calculation (more lenient than backend)
+  // 0-9 calls: bronze, 10-29: silver, 30-59: gold, 60+: challenger
+  const calculateRank = (calls: number): "bronze" | "silver" | "gold" | "challenger" => {
+    if (calls >= 60) return "challenger";
+    if (calls >= 30) return "gold";
+    if (calls >= 10) return "silver";
+    return "bronze";
+  };
+
   const getFilteredData = () => {
+    // Apply frontend rank calculation to each entry
+    const dataWithRanks = leaderboardData.map(entry => ({
+      ...entry,
+      rank: calculateRank(entry.callsMade)
+    }));
+    
     if (activeTab === "deals-closed") {
-      return [...leaderboardData].sort((a, b) => b.dealsClosed - a.dealsClosed);
+      return [...dataWithRanks].sort((a, b) => b.dealsClosed - a.dealsClosed);
     } else if (activeTab === "upsells") {
-      return [...leaderboardData].sort((a, b) => b.upsells - a.upsells);
+      return [...dataWithRanks].sort((a, b) => b.upsells - a.upsells);
     }
-    return [...leaderboardData].sort((a, b) => b.callsMade - a.callsMade);
+    return [...dataWithRanks].sort((a, b) => b.callsMade - a.callsMade);
   };
 
   const topPerformers = getFilteredData().slice(0, 3);

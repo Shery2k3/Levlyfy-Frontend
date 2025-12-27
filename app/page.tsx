@@ -244,13 +244,35 @@ export default function HomePage() {
   };
 
   // Calculate progress percentages and level
-  const callsProgress = userStats
-    ? Math.min((userStats.callsMade / 20) * 100, 100)
-    : 0; // Goal: 20 calls
+  // Daily goal uses callsMadeToday (new API field)
+  const dailyCallsProgress = userStats
+    ? Math.min(((userStats.callsMadeToday || 0) / 20) * 100, 100)
+    : 0; // Goal: 20 calls per day
   const dealsProgress = userStats
     ? Math.min((userStats.dealsClosed / 5) * 100, 100)
     : 0; // Goal: 5 deals
-  const currentLevel = userStats ? Math.floor(userStats.totalScore / 100) : 0; // 100 points per level
+  
+  // Level based on total calls made (every 10 calls = 1 level)
+  const currentLevel = userStats ? Math.floor((userStats.callsMade || 0) / 10) : 0;
+  
+  // Frontend rank calculation (more lenient than backend)
+  // 0-9 calls: bronze, 10-29: silver, 30-59: gold, 60+: challenger
+  const calculateRank = (calls: number): "bronze" | "silver" | "gold" | "challenger" => {
+    if (calls >= 60) return "challenger";
+    if (calls >= 30) return "gold";
+    if (calls >= 10) return "silver";
+    return "bronze";
+  };
+  const currentRank = userStats ? calculateRank(userStats.callsMade || 0) : "bronze";
+  
+  // Level title based on level
+  const getLevelTitle = (level: number) => {
+    if (level >= 8) return "Sales Legend";
+    if (level >= 5) return "Sales Master";
+    if (level >= 3) return "Rising Star";
+    if (level >= 1) return "Apprentice";
+    return "Rookie";
+  };
 
   const motivationalQuotes = generateMotivationalQuotes(
     userStats,
@@ -420,11 +442,7 @@ export default function HomePage() {
                     </span>
                     <span className="text-white/40">•</span>
                     <span className="text-sm text-primary font-semibold">
-                      {currentLevel >= 5
-                        ? "Sales Master"
-                        : currentLevel >= 3
-                        ? "Rising Star"
-                        : "Rookie"}
+                      {getLevelTitle(currentLevel)}
                     </span>
                   </div>
                 </div>
@@ -448,23 +466,23 @@ export default function HomePage() {
               
               <div className="flex-1 flex flex-col items-center justify-center py-2">
                 <ProgressRing
-                  progress={callsProgress}
+                  progress={dailyCallsProgress}
                   size={110}
                   strokeWidth={10}
-                  text={`${userStats?.callsMade || 0}/20`}
+                  text={`${userStats?.callsMadeToday || 0}/20`}
                   textClassName="text-xl font-bold text-white"
                   strokeColor="#3b82f6"
                   bgColor="rgba(59, 130, 246, 0.1)"
                 />
                 <p className="text-white/60 text-sm mt-4 font-medium">
-                  calls completed
+                  calls today
                 </p>
               </div>
               
               <div className="mt-auto pt-4 border-t border-white/5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white/40">Remaining</span>
-                  <span className="text-primary font-semibold">{Math.max(0, 20 - (userStats?.callsMade || 0))} calls</span>
+                  <span className="text-primary font-semibold">{Math.max(0, 20 - (userStats?.callsMadeToday || 0))} calls</span>
                 </div>
               </div>
             </div>

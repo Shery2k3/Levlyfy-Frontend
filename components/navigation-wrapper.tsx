@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import FloatingNav from "@/components/floating-nav";
 
 export default function NavigationWrapper({
@@ -9,6 +10,11 @@ export default function NavigationWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const hideNavigation = [
     "/auth/login",
@@ -20,7 +26,7 @@ export default function NavigationWrapper({
 
   return (
     <div className="relative min-h-screen bg-[#0a0a0f]">
-      {shouldShowNavigation && <FloatingNav />}
+      {mounted && shouldShowNavigation && <FloatingNav />}
       <main className="pb-24">{children}</main>
     </div>
   );

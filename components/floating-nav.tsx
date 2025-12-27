@@ -36,7 +36,17 @@ export default function FloatingNav() {
     }
   };
 
-  const currentLevel = userStats ? Math.floor(userStats.totalScore / 100) : 0;
+  // Level based on total calls made (every 10 calls = 1 level)
+  const currentLevel = userStats ? Math.floor((userStats.callsMade || 0) / 10) : 0;
+  
+  // Level title based on level
+  const getLevelTitle = (level: number) => {
+    if (level >= 8) return "Sales Legend";
+    if (level >= 5) return "Sales Master";
+    if (level >= 3) return "Rising Star";
+    if (level >= 1) return "Apprentice";
+    return "Rookie";
+  };
 
   const handleLogout = () => {
     logout();
@@ -91,7 +101,7 @@ export default function FloatingNav() {
                 <div>
                   <p className="text-sm font-medium text-white">Level {currentLevel}</p>
                   <p className="text-xs text-primary">
-                    {currentLevel >= 5 ? "Sales Master" : currentLevel >= 3 ? "Rising Star" : "Rookie"}
+                    {getLevelTitle(currentLevel)}
                   </p>
                 </div>
               </div>
