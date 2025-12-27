@@ -17,7 +17,6 @@ import PerformanceChart from "@/components/performance-chart";
 import DialerModal from "@/components/dialer-modal";
 import {
   Phone,
-  PhoneOutgoing,
   Clock,
   MessageSquareText,
   Star,
@@ -31,15 +30,8 @@ import {
   Target,
   Award,
   Sparkles,
-  Calendar,
   Flame,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import TeamHighlights from "@/components/team-highlights";
 import LeaderboardHighlights from "@/components/leaderboard-highlights";
 import CallScreen from "@/components/call-screen";
@@ -414,13 +406,13 @@ export default function HomePage() {
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#3b82f6]/20 rounded-full blur-3xl" />
               <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-[#3b82f6]/10 rounded-full blur-2xl" />
               
-              <div className="relative p-5 md:p-6 flex flex-col h-full">
+              <div className="relative p-6 md:p-8 flex flex-col h-full">
                 {/* Header Row: Avatar with Streak + Name + Status */}
-                <div className="flex items-center gap-4 mb-5">
+                <div className="flex items-center gap-5 mb-6">
                   {/* Avatar with Streak Ring */}
                   <div className="relative flex-shrink-0">
                     {/* Streak progress ring (SVG) */}
-                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                    <svg className="w-20 h-20 -rotate-90" viewBox="0 0 64 64">
                       {/* Background ring */}
                       <circle
                         cx="32"
@@ -451,8 +443,8 @@ export default function HomePage() {
                     </svg>
                     {/* Avatar in center */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#3b82f6] to-[#2563eb] flex items-center justify-center shadow-lg shadow-[#3b82f6]/30">
-                        <span className="text-lg font-bold text-white">
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#3b82f6] to-[#2563eb] flex items-center justify-center shadow-lg shadow-[#3b82f6]/30">
+                        <span className="text-xl font-bold text-white">
                           {user?.name?.charAt(0).toUpperCase() || "U"}
                         </span>
                       </div>
@@ -462,25 +454,25 @@ export default function HomePage() {
                   {/* Name + Status */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <h1 className="text-xl font-bold text-white truncate">
+                      <h1 className="text-2xl font-bold text-white truncate">
                         Hello, {user?.name?.split(' ')[0] || "User"}!
                       </h1>
                       {/* Status Badge */}
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-xs font-medium text-emerald-400">Online</span>
+                        <span className="text-sm font-medium text-emerald-400">Online</span>
                       </div>
                     </div>
                     {/* Streak text */}
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Flame className="w-3.5 h-3.5 text-orange-400" />
-                      <span className="text-xs text-white/50">7 Day Streak</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Flame className="w-4 h-4 text-orange-400" />
+                      <span className="text-sm text-white/50">7 Day Streak</span>
                     </div>
                   </div>
                 </div>
 
-                {/* XP Progress Bar - Central Feature */}
-                <div className="flex-1 flex flex-col justify-center">
+                {/* XP Progress Bar - Bottom */}
+                <div className="mt-auto pt-4">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-xs font-medium text-white/60">XP to Level {currentLevel + 1}</span>
                     <span className="text-xs font-semibold text-[#3b82f6]">
@@ -510,60 +502,6 @@ export default function HomePage() {
                     <span className="text-white/30">•</span>
                     <span className="text-sm text-[#3b82f6] font-semibold">{getLevelTitle(currentLevel)}</span>
                   </div>
-                </div>
-
-                {/* Quick Action Row */}
-                <div className="mt-5 pt-4 border-t border-white/5">
-                  <TooltipProvider delayDuration={100}>
-                    <div className="flex items-center justify-center gap-4">
-                      {/* Log Call */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button 
-                            onClick={() => setIsDialerOpen(true)}
-                            className="group relative w-12 h-12 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[#3b82f6]/50 hover:bg-[#3b82f6]/10 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-[#3b82f6]/20"
-                          >
-                            <PhoneOutgoing className="w-5 h-5 text-white/70 group-hover:text-[#3b82f6] transition-colors" />
-                            {/* Glassmorphism effect */}
-                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="bg-[#1e293b] border-white/10 text-white">
-                          <p>Log Call</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      {/* Quick Task */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button 
-                            className="group relative w-12 h-12 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 hover:border-amber-500/50 hover:bg-amber-500/10 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-amber-500/20"
-                          >
-                            <Zap className="w-5 h-5 text-white/70 group-hover:text-amber-400 transition-colors" />
-                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="bg-[#1e293b] border-white/10 text-white">
-                          <p>Quick Task</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      {/* Schedule Meeting */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button 
-                            className="group relative w-12 h-12 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-purple-500/20"
-                          >
-                            <Calendar className="w-5 h-5 text-white/70 group-hover:text-purple-400 transition-colors" />
-                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="bg-[#1e293b] border-white/10 text-white">
-                          <p>Schedule Meeting</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </TooltipProvider>
                 </div>
               </div>
             </div>
