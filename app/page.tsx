@@ -396,7 +396,7 @@ export default function HomePage() {
                 </div>
               </div>
               
-              <div className="relative p-6 md:p-8">
+              <div className="relative p-6 md:p-8 flex flex-col justify-between h-full">
                 <div className="flex items-start gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
                     <span className="text-2xl font-bold text-white">
@@ -404,26 +404,28 @@ export default function HomePage() {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">
+                    <h1 className="text-2xl lg:text-3xl font-bold text-white">
                       Hello, {user?.name || "User"}!
                     </h1>
-                    <p className="text-white/50 text-sm mb-4">
+                    <p className="text-white/50 text-sm mt-1">
                       Welcome back to Levlyfy
                     </p>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
-                      <Award className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium text-white">
-                        Level {currentLevel}
-                      </span>
-                      <span className="text-white/40">•</span>
-                      <span className="text-sm text-primary font-semibold">
-                        {currentLevel >= 5
-                          ? "Sales Master"
-                          : currentLevel >= 3
-                          ? "Rising Star"
-                          : "Rookie"}
-                      </span>
-                    </div>
+                  </div>
+                </div>
+                <div className="mt-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                    <Award className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-white">
+                      Level {currentLevel}
+                    </span>
+                    <span className="text-white/40">•</span>
+                    <span className="text-sm text-primary font-semibold">
+                      {currentLevel >= 5
+                        ? "Sales Master"
+                        : currentLevel >= 3
+                        ? "Rising Star"
+                        : "Rookie"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -432,23 +434,38 @@ export default function HomePage() {
             {/* daily goals - Enhanced */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0d1117] to-[#161b22] border border-white/5 p-6 flex flex-col shadow-xl w-full lg:w-80">
               <div className="absolute -top-12 -right-12 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
-              <div className="flex items-center gap-2 mb-4">
-                <Target className="w-5 h-5 text-primary" />
-                <h2 className="text-lg font-bold text-white">Daily Goal</h2>
+              <div className="absolute -bottom-8 -left-8 w-16 h-16 bg-blue-600/10 rounded-full blur-xl" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <Target className="w-4 h-4 text-primary" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white">Daily Goal</h2>
+                </div>
+                <span className="text-xs text-white/40 bg-white/5 px-2 py-1 rounded-full">Today</span>
               </div>
-              <div className="flex-1 flex flex-col items-center justify-center">
+              
+              <div className="flex-1 flex flex-col items-center justify-center py-2">
                 <ProgressRing
                   progress={callsProgress}
-                  size={120}
-                  strokeWidth={12}
+                  size={110}
+                  strokeWidth={10}
                   text={`${userStats?.callsMade || 0}/20`}
                   textClassName="text-xl font-bold text-white"
                   strokeColor="#3b82f6"
                   bgColor="rgba(59, 130, 246, 0.1)"
                 />
-                <p className="text-primary text-sm mt-3 font-medium">
+                <p className="text-white/60 text-sm mt-4 font-medium">
                   calls completed
                 </p>
+              </div>
+              
+              <div className="mt-auto pt-4 border-t border-white/5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/40">Remaining</span>
+                  <span className="text-primary font-semibold">{Math.max(0, 20 - (userStats?.callsMade || 0))} calls</span>
+                </div>
               </div>
             </div>
           </div>
@@ -550,12 +567,12 @@ export default function HomePage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-white/50 border-b border-white/10">
-                      <th className="pb-4 font-medium text-sm">Date</th>
-                      <th className="pb-4 font-medium text-sm">Source</th>
-                      <th className="pb-4 font-medium text-sm">Status</th>
-                      <th className="pb-4 font-medium text-sm">Score</th>
-                      <th className="pb-4 font-medium text-sm">Actions</th>
+                    <tr className="text-white/50 border-b border-white/10">
+                      <th className="pb-4 font-medium text-sm text-left">Date</th>
+                      <th className="pb-4 font-medium text-sm text-center">Source</th>
+                      <th className="pb-4 font-medium text-sm text-center">Status</th>
+                      <th className="pb-4 font-medium text-sm text-center">Score</th>
+                      <th className="pb-4 font-medium text-sm text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -577,13 +594,13 @@ export default function HomePage() {
                           key={call._id}
                           className="border-b border-white/5 hover:bg-white/5 transition-colors"
                         >
-                          <td className="py-4 text-sm text-white/80">
+                          <td className="py-4 text-sm text-white/80 text-left">
                             {new Date(call.createdAt).toLocaleDateString()}{" "}
                             <span className="text-white/40">{new Date(call.createdAt).toLocaleTimeString()}</span>
                           </td>
-                          <td className="py-4 text-sm">
+                          <td className="py-4 text-sm text-center">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
                                 call.source === "twilio-recording"
                                   ? "bg-primary/20 text-primary"
                                   : "bg-purple-500/20 text-purple-400"
@@ -594,9 +611,9 @@ export default function HomePage() {
                                 : "Manual"}
                             </span>
                           </td>
-                          <td className="py-4">
+                          <td className="py-4 text-center">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
                                 call.status === "analyzed"
                                   ? "bg-green-500/20 text-green-400"
                                   : call.status === "processing"
@@ -609,7 +626,7 @@ export default function HomePage() {
                               {call.status}
                             </span>
                           </td>
-                          <td className="py-4 text-sm">
+                          <td className="py-4 text-sm text-center">
                             {call.score ? (
                               <span
                                 className={`font-semibold ${
@@ -626,7 +643,7 @@ export default function HomePage() {
                               <span className="text-white/30">-</span>
                             )}
                           </td>
-                          <td className="py-4">
+                          <td className="py-4 text-right">
                             {call.status === "analyzed" && (
                               <Button
                                 onClick={() => viewCallFeedback(call)}
