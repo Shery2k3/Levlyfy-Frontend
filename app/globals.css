@@ -98,15 +98,20 @@
 }
 
 .card-gradient {
-  @apply bg-gradient-to-r from-slate-900 to-slate-800;
+  @apply bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#0d1117] border border-white/5;
 }
 
 .banner-gradient {
   @apply bg-gradient-to-r from-gray-900 to-transparent;
 }
 
+.primary-button {
+  @apply bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white h-14 text-lg font-bold transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30;
+}
+
+/* Legacy lime-button mapped to new primary style */
 .lime-button {
-  @apply bg-lime hover:bg-lime/90 text-black h-14 text-lg font-bold transition-all duration-200;
+  @apply bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white h-14 text-lg font-bold transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30;
 }
 
 .achievement-card {
@@ -134,11 +139,11 @@
 }
 
 .performance-card {
-  @apply bg-blue-950 rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-blue-900/20;
+  @apply bg-gradient-to-br from-[#0d1830] to-[#0a1628] rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 border border-white/5;
 }
 
 .stats-card {
-  @apply bg-gray-900 rounded-lg p-6 transition-all duration-200 hover:shadow-lg hover:shadow-blue-900/20;
+  @apply bg-[#0d1117] rounded-xl p-6 transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 border border-white/5;
 }
 
 .leaderboard-row {
@@ -198,13 +203,14 @@
 
 /* Better progress ring styling */
 .progress-ring-circle {
-  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.3));
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
 }
 
 /* Enhanced button styles */
-.lime-button:hover {
+.lime-button:hover,
+.primary-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
 }
 
 /* Performance chart enhancements */

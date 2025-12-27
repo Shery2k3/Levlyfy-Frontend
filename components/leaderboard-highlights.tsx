@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { Trophy } from "lucide-react"
 
 interface LeaderboardEntry {
   place: number;
@@ -23,23 +24,28 @@ export default function LeaderboardHighlights({ data = [] }: LeaderboardHighligh
   const [isHovered, setIsHovered] = useState<number | null>(null)
 
   return (
-    <div className="stats-card">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Leaderboard Highlights</h2>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-bold text-white">Leaderboard</h2>
+        </div>
         <Link href="/leaderboard">
-          <Button className="bg-blue-600 hover:bg-blue-700">View My Place</Button>
+          <Button className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white text-sm px-4">
+            View Full
+          </Button>
         </Link>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-gray-400 border-b border-gray-800">
-              <th className="pb-2">Place</th>
-              <th className="pb-2">Agent ID</th>
-              <th className="pb-2">Calls Made</th>
-              <th className="pb-2">Deals Closed</th>
-              <th className="pb-2">Total Score</th>
-              <th className="pb-2">Rank</th>
+            <tr className="text-left text-white/50 border-b border-white/10 text-sm">
+              <th className="pb-3 font-medium">Place</th>
+              <th className="pb-3 font-medium">Agent</th>
+              <th className="pb-3 font-medium">Calls</th>
+              <th className="pb-3 font-medium">Deals</th>
+              <th className="pb-3 font-medium">Score</th>
+              <th className="pb-3 font-medium">Rank</th>
             </tr>
           </thead>
           <tbody>
@@ -49,8 +55,8 @@ export default function LeaderboardHighlights({ data = [] }: LeaderboardHighligh
                   key={entry.userId}
                   place={entry.place}
                   name={entry.name}
-                  calls={`${entry.callsMade} (${entry.callsMade * 10})`}
-                  deals={`${entry.dealsClosed} (${entry.dealsClosed * 50})`}
+                  calls={`${entry.callsMade}`}
+                  deals={`${entry.dealsClosed}`}
                   score={entry.totalScore.toLocaleString()}
                   rank={entry.rank}
                   isHovered={isHovered === index}
@@ -60,7 +66,7 @@ export default function LeaderboardHighlights({ data = [] }: LeaderboardHighligh
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="py-4 text-center text-gray-400">
+                <td colSpan={6} className="py-8 text-center text-white/40">
                   No leaderboard data available
                 </td>
               </tr>
@@ -94,43 +100,63 @@ function LeaderboardRow({
   onLeave: () => void
 }) {
   return (
-    <tr className="leaderboard-row" onMouseEnter={onHover} onMouseLeave={onLeave}>
-      <td className="py-2 flex items-center gap-2">
-        <div
-          className={`w-6 h-6 ${place === 1 ? "bg-yellow-600" : place === 2 ? "bg-gray-400" : "bg-amber-700"} rounded-full flex items-center justify-center text-sm font-bold`}
-        >
-          {place}
+    <tr 
+      className="border-b border-white/5 hover:bg-white/5 transition-colors" 
+      onMouseEnter={onHover} 
+      onMouseLeave={onLeave}
+    >
+      <td className="py-3">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold ${
+              place === 1 
+                ? "bg-gradient-to-br from-yellow-400 to-amber-600 text-white" 
+                : place === 2 
+                ? "bg-gradient-to-br from-gray-300 to-gray-500 text-white" 
+                : "bg-gradient-to-br from-amber-600 to-amber-800 text-white"
+            }`}
+          >
+            {place}
+          </div>
         </div>
       </td>
-      <td className="py-2">{name}</td>
-      <td className="py-2">
-        <div className="flex flex-col">
-          <span>{calls}</span>
-          <div className={`w-20 h-1 bg-orange-700 rounded-full ${isHovered ? "animate-pulse" : ""}`}></div>
+      <td className="py-3 text-white/90">{name}</td>
+      <td className="py-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-white/90">{calls}</span>
+          <div className={`w-20 h-1 bg-gradient-to-r from-primary to-blue-400 rounded-full ${isHovered ? "animate-pulse" : ""}`}></div>
         </div>
       </td>
-      <td className="py-2">
-        <div className="flex flex-col">
-          <span>{deals}</span>
-          <div className={`w-16 h-1 bg-green-700 rounded-full ${isHovered ? "animate-pulse" : ""}`}></div>
+      <td className="py-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-white/90">{deals}</span>
+          <div className={`w-16 h-1 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full ${isHovered ? "animate-pulse" : ""}`}></div>
         </div>
       </td>
-      <td className="py-2">{score}</td>
-      <td className="py-2">
-        <div
-          className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${
-            rank === "challenger" ? "badge-challenger" : 
-            rank === "gold" ? "badge-gold" :
-            rank === "silver" ? "badge-silver" : "badge-bronze"
+      <td className="py-3 text-white/90 font-medium">{score}</td>
+      <td className="py-3">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+            rank === "challenger" 
+              ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
+              : rank === "gold" 
+              ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30" 
+              : rank === "silver" 
+              ? "bg-gray-400/20 text-gray-300 border border-gray-400/30" 
+              : "bg-amber-600/20 text-amber-300 border border-amber-500/30"
           }`}
         >
-          {rank.charAt(0).toUpperCase() + rank.slice(1)}
-          <div className={`ml-1 w-3 h-3 rounded-full ${
-            rank === "challenger" ? "dot-challenger" : 
-            rank === "gold" ? "dot-gold" :
-            rank === "silver" ? "dot-silver" : "dot-bronze"
+          <div className={`w-2 h-2 rounded-full ${
+            rank === "challenger" 
+              ? "bg-purple-400" 
+              : rank === "gold" 
+              ? "bg-yellow-400" 
+              : rank === "silver" 
+              ? "bg-gray-400" 
+              : "bg-amber-500"
           }`}></div>
-        </div>
+          {rank.charAt(0).toUpperCase() + rank.slice(1)}
+        </span>
       </td>
     </tr>
   )
