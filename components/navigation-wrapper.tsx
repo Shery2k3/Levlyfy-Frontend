@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Navigation from "@/components/navigation";
+import FloatingNav from "@/components/floating-nav";
 
 export default function NavigationWrapper({
   children,
@@ -19,9 +19,9 @@ export default function NavigationWrapper({
   const shouldShowNavigation = !hideNavigation.includes(pathname);
 
   return (
-    <div className="relative min-h-screen bg-[url('/images/hexagon-bg.png')] bg-cover bg-black">
-      {shouldShowNavigation && <Navigation />}
-      <main className="pb-12">{children}</main>
+    <div className="relative min-h-screen bg-[#0a0a0f]">
+      {shouldShowNavigation && <FloatingNav />}
+      <main className="pb-24">{children}</main>
     </div>
   );
 }
